@@ -1,15 +1,7 @@
-# ecm-hack
+# install
 
-To install dependencies:
+install [bun](https://bun.com/)
 
-```bash
-bun install
-```
+# run
 
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.2.20. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+`bun start`
