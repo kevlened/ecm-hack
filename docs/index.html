@@ -13,37 +13,9 @@
         }
         #chart {
             width: 928px;
-@@ -17,6 +19,7 @@
-</head>
-<body>
-    <h1>Human Body SNP Treemap</h1>
-    <p>Click on system areas to zoom in, click on the header bar to zoom out</p>
-    <div id="chart"></div>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script>
-@@ -94,150 +97,165 @@
-            ]
-        };
-
-        // Specify the chart’s dimensions.
-        // Specify the chart's dimensions.
-        const width = 928;
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Human Body SNP Treemap</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
+            margin: 0 auto;
         }
-        #chart {
-            width: 928px;
-@@ -17,6 +19,7 @@
+    </style>
 </head>
 <body>
     <h1>Human Body SNP Treemap</h1>
@@ -51,11 +23,80 @@
     <div id="chart"></div>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
-@@ -94,150 +97,165 @@
+        const human_body_data = {
+            "name": "Human Body",
+            "children": [
+                {
+                    "name": "Nervous System",
+                    "children": [
+                        {
+                            "name": "Brain",
+                            "value": 100,
+                            "natural_snps": 1000,
+                            "mutated_snps": 50
+                        },
+                        {
+                            "name": "Spinal Cord",
+                            "value": 20,
+                            "natural_snps": 200,
+                            "mutated_snps": 5
+                        }
+                    ]
+                },
+                {
+                    "name": "Cardiovascular System",
+                    "children": [
+                        {
+                            "name": "Heart",
+                            "value": 50,
+                            "natural_snps": 500,
+                            "mutated_snps": 25
+                        },
+                        {
+                            "name": "Blood Vessels",
+                            "value": 30,
+                            "natural_snps": 300,
+                            "mutated_snps": 100
+                        }
+                    ]
+                },
+                {
+                    "name": "Respiratory System",
+                    "children": [
+                        {
+                            "name": "Lungs",
+                            "value": 60,
+                            "natural_snps": 600,
+                            "mutated_snps": 120
+                        }
+                    ]
+                },
+                {
+                    "name": "Digestive System",
+                    "children": [
+                        {
+                            "name": "Stomach",
+                            "value": 40,
+                            "natural_snps": 400,
+                            "mutated_snps": 10
+                        },
+                        {
+                            "name": "Liver",
+                            "value": 45,
+                            "natural_snps": 450,
+                            "mutated_snps": 80
+                        },
+                        {
+                            "name": "Intestines",
+                            "value": 55,
+                            "natural_snps": 550,
+                            "mutated_snps": 200
+                        }
+                    ]
+                }
             ]
         };
 
-        // Specify the chart’s dimensions.
         // Specify the chart's dimensions.
         const width = 928;
         const height = 924;
