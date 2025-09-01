@@ -1,503 +1,220 @@
-
-  <!DOCTYPE html>
-  <html lang="en">
-  <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Human Body ECM Treemap Visualizer</title>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-      <style>
-          body {
-              margin: 0;
-              padding: 0;
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-              background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-              color: white;
-              overflow: hidden;
-          }
-
-          .container {
-              position: relative;
-              width: 100vw;
-              height: 100vh;
-          }
-
-          .header {
-              position: absolute;
-              top: 20px;
-              left: 20px;
-              z-index: 100;
-              background: rgba(0, 0, 0, 0.8);
-              backdrop-filter: blur(10px);
-              padding: 20px;
-              border-radius: 15px;
-              border: 1px solid rgba(78, 205, 196, 0.3);
-          }
-
-          .header h1 {
-              margin: 0 0 10px 0;
-              font-size: 1.8em;
-              background: linear-gradient(45deg, #4ecdc4, #ff6b6b);
-              -webkit-background-clip: text;
-              -webkit-text-fill-color: transparent;
-              background-clip: text;
-          }
-
-          .controls {
-              position: absolute;
-              top: 20px;
-              right: 20px;
-              z-index: 100;
-              background: rgba(0, 0, 0, 0.8);
-              backdrop-filter: blur(10px);
-              padding: 20px;
-              border-radius: 15px;
-              border: 1px solid rgba(78, 205, 196, 0.3);
-              width: 300px;
-          }
-
-          .control-group {
-              margin-bottom: 15px;
-          }
-
-          .control-group label {
-              display: block;
-              margin-bottom: 5px;
-              font-weight: bold;
-              font-size: 0.9em;
-              color: #4ecdc4;
-          }
-
-          select, input[type="range"], button {
-              width: 100%;
-              padding: 8px;
-              border: none;
-              border-radius: 8px;
-              background: rgba(255, 255, 255, 0.1);
-              color: white;
-              font-size: 14px;
-          }
-
-          button {
-              background: linear-gradient(45deg, #4ecdc4, #44a08d);
-              cursor: pointer;
-              transition: all 0.3s;
-              margin: 5px 0;
-          }
-
-          button:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 5px 15px rgba(78, 205, 196, 0.3);
-          }
-
-          .info-panel {
-              position: absolute;
-              bottom: 20px;
-              left: 20px;
-              z-index: 100;
-              background: rgba(0, 0, 0, 0.8);
-              backdrop-filter: blur(10px);
-              padding: 20px;
-              border-radius: 15px;
-              border: 1px solid rgba(78, 205, 196, 0.3);
-              max-width: 400px;
-          }
-
-          .snp-details {
-              position: absolute;
-              bottom: 20px;
-              right: 20px;
-              z-index: 100;
-              background: rgba(0, 0, 0, 0.8);
-              backdrop-filter: blur(10px);
-              padding: 20px;
-              border-radius: 15px;
-              border: 1px solid rgba(78, 205, 196, 0.3);
-              max-width: 350px;
-          }
-
-          .breadcrumb {
-              position: absolute;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%);
-              z-index: 90;
-              background: rgba(0, 0, 0, 0.7);
-              padding: 10px 20px;
-              border-radius: 25px;
-              font-size: 0.9em;
-              pointer-events: none;
-              opacity: 0;
-              transition: opacity 0.3s;
-          }
-
-          .breadcrumb.visible {
-              opacity: 1;
-          }
-
-          .treemap-cell {
-              stroke: #fff;
-              stroke-width: 1;
-              cursor: pointer;
-              transition: all 0.3s;
-          }
-
-          .treemap-cell:hover {
-              stroke-width: 3;
-              stroke: #4ecdc4;
-              filter: brightness(1.2);
-          }
-
-          .cell-label {
-              font-weight: bold;
-              text-anchor: middle;
-              dominant-baseline: middle;
-              pointer-events: none;
-              fill: white;
-              text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-          }
-
-          .snp-dot {
-              r: 2;
-              cursor: pointer;
-              transition: r 0.3s;
-          }
-
-          .snp-dot:hover {
-              r: 4;
-          }
-
-          .natural-snp {
-              fill: #00ff88;
-              opacity: 0.8;
-          }
-
-          .mutation-snp {
-              fill: #ff4444;
-              opacity: 0.9;
-          }
-
-      </style>
-  </head>
-  <body>
-      <div class="container">
-          <div class="header">
-              <h1>Human Body ECM Explorer</h1>
-          </div>
-
-          <div class="controls">
-              <div class="control-group">
-                  <label>Protein Family</label>
-                  <select id="proteinFilter">
-                      <option value="all">All</option>
-                      <option value="collagen">Collagen</option>
-                      <option value="laminin">Laminin</option>
-                      <option value="fibronectin">Fibronectin</option>
-                      <option value="proteoglycans">Proteoglycans</option>
-                      <option value="elastin">Elastin</option>
-                  </select>
-              </div>
-
-              <div class="control-group">
-                  <label>SNP Type</label>
-                  <select id="snpTypeFilter">
-                      <option value="all">All</option>
-                      <option value="natural">Natural</option>
-                      <option value="mutation">Mutations</option>
-                      <option value="pathogenic">Pathogenic</option>
-                  </select>
-              </div>
-
-              <button onclick="regenerateData()">Regenerate SNPs</button>
-          </div>
-
-          <div class="info-panel">
-              <h3>Current View</h3>
-              <div id="viewInfo">
-                  <p><strong>System:</strong> <span id="currentSystem"></span></p>
-                  <p><strong>Organ:</strong> <span id="currentOrgan"></span></p>
-                  <p><strong>Total SNPs:</strong> <span id="totalSNPs"></span></p>
-                  <p><strong>Natural:</strong> <span id="naturalCount"></span></p>
-                  <p><strong>Mutations:</strong> <span id="mutationCount"></span></p>
-              </div>
-          </div>
-
-          <div class="snp-details">
-              <h3>SNP Information</h3>
-              <div id="snpDetails">
-                  <p>Hover over an SNP dot for details.</p>
-              </div>
-          </div>
-
-          <svg id="treemap" width="100%" height="100vh"></svg>
-      </div>
-
-      <script>
-          // Global variables
-          let currentRoot = null;
-          let svg, group, x, y;
-          let snpData = [];
-          let baseRoot = null;
-
-          const humanBodyData = {
-              name: "Human Body",
-              children: [
-                  {
-                      name: "Nervous System",
-                      value: 25,
-                      color: "#ff6b9d",
-                      children: [
-                          { name: "Brain", value: 15, color: "#ff8fab", ecmDensity: 0.8 },
-                          { name: "Spinal Cord", value: 5, color: "#ff9fb3", ecmDensity: 0.7 },
-                          { name: "Peripheral Nerves", value: 5, color: "#ffb3c6", ecmDensity: 0.5 }
-                      ]
-                  },
-                  {
-                      name: "Cardiovascular System",
-                      value: 20,
-                      color: "#e74c3c",
-                      children: [
-                          { name: "Heart", value: 8, color: "#ec7063", ecmDensity: 0.8 },
-                          { name: "Blood Vessels", value: 12, color: "#e95e6f", ecmDensity: 0.85 }
-                      ]
-                  },
-                  {
-                      name: "Musculoskeletal System",
-                      value: 30,
-                      color: "#3498db",
-                      children: [
-                          { name: "Bones", value: 15, color: "#5dade2", ecmDensity: 0.9 },
-                          { name: "Muscles", value: 10, color: "#7fb3d3", ecmDensity: 0.7 },
-                          { name: "Connective Tissue", value: 5, color: "#a3c4e0", ecmDensity: 0.95 }
-                      ]
-                  },
-              ]
-          };
-
-          const ecmProteins = {
-              'COL1A1': { name: 'Collagen I Alpha 1', snpRate: 0.15, naturalRate: 0.85, family: 'collagen' },
-              'LAMA1': { name: 'Laminin Alpha 1', snpRate: 0.18, naturalRate: 0.75, family: 'laminin' },
-              'FN1': { name: 'Fibronectin 1', snpRate: 0.14, naturalRate: 0.80, family: 'fibronectin' },
-              'HSPG2': { name: 'Perlecan', snpRate: 0.10, naturalRate: 0.90, family: 'proteoglycans' },
-              'ELN': { name: 'Elastin', snpRate: 0.08, naturalRate: 0.92, family: 'elastin' },
-          };
-
-          function init() {
-              const width = window.innerWidth;
-              const height = window.innerHeight;
-
-              x = d3.scaleLinear().rangeRound([0, width]);
-              y = d3.scaleLinear().rangeRound([0, height]);
-
-              svg = d3.select("#treemap")
-                  .on("contextmenu", (e) => { e.preventDefault(); zoomOut(currentRoot); });
-
-              function tile(node, x0, y0, x1, y1) {
-                  d3.treemapBinary(node, 0, 0, width, height);
-                  for (const child of node.children) {
-                      child.x0 = x0 + child.x0 / width * (x1 - x0);
-                      child.x1 = x0 + child.x1 / width * (x1 - x0);
-                      child.y0 = y0 + child.y0 / height * (y1 - y0);
-                      child.y1 = y0 + child.y1 / height * (y1 - y0);
-                  }
-              }
-
-              const hierarchy = d3.hierarchy(humanBodyData)
-                  .sum(d => d.value)
-                  .sort((a, b) => b.value - a.value);
-
-              baseRoot = d3.treemap().tile(tile)(hierarchy);
-              currentRoot = baseRoot;
-
-              group = svg.append("g").call(render, currentRoot);
-
-              setupEventListeners();
-              generateSNPData();
-              updatePanels(currentRoot);
-          }
-
-          function render(group, root) {
-              const node = group
-                  .selectAll("g")
-                  .data(root.children.concat(root))
-                  .join("g");
-
-              node.filter(d => d === root ? d.parent : d.children)
-                  .attr("cursor", "pointer")
-                  .on("click", (event, d) => {
-                      event.stopPropagation();
-                      d === root ? zoomOut(root) : zoomIn(d);
-                  });
-
-              node.append("title")
-                  .text(d => ${getName(d)}\nECM Density: ${Math.round((d.data.ecmDensity || 0.5) * 100)}%);
-
-              node.append("rect")
-                  .attr("class", "treemap-cell")
-                  .attr("fill", d => d.children ? d.data.color : d3.interpolateViridis(d.data.ecmDensity || 0.5))
-                  .attr("stroke", "#fff");
-
-              node.append("text")
-                  .attr("class", "cell-label")
-                  .selectAll("tspan")
-                  .data(d => d.data.name.split(/(?=[A-Z][^A-Z])/g))
-                  .join("tspan")
-                  .attr("x", 0)
-                  .attr("y", (d, i, nodes) => ${(i - (nodes.length - 1) / 2) * 1.1}em)
-                  .text(d => d);
-
-              group.call(position, root);
-
-              setTimeout(() => addSNPDots(group, root), 750);
-          }
-
-          function position(group, root) {
-              group.selectAll("g")
-                  .attr("transform", d => translate(${x(d.x0)},${y(d.y0)}))
-                  .select("rect")
-                  .attr("width", d => x(d.x1) - x(d.x0))
-                  .attr("height", d => y(d.y1) - y(d.y0));
-
-              group.selectAll("text")
-                  .attr("x", d => (x(d.x1) - x(d.x0)) / 2)
-                  .attr("y", d => (y(d.y1) - y(d.y0)) / 2);
-          }
-
-          function addSNPDots(group, root) {
-              svg.selectAll(".snp-dot").remove();
-
-              const leafNodes = root.descendants().filter(d => !d.children);
-
-              leafNodes.forEach(node => {
-                  const nodeWidth = x(node.x1) - x(node.x0);
-                  const nodeHeight = y(node.y1) - y(node.y0);
-                  const numSNPs = Math.floor((nodeWidth * nodeHeight) / 500);
-
-                  for (let i = 0; i < numSNPs; i++) {
-                      const snp = generateSNPForNode(node, i);
-                      if (!passesFilters(snp)) continue;
-
-                      const snpX = x(node.x0) + Math.random() * nodeWidth;
-                      const snpY = y(node.y0) + Math.random() * nodeHeight;
-
-                      svg.append("circle")
-                          .attr("class", snp-dot ${snp.type}-snp)
-                          .attr("cx", snpX)
-                          .attr("cy", snpY)
-                          .on("mouseover", () => showSNPDetails(snp))
-                          .on("click", (e) => { e.stopPropagation(); alert(SNP: ${snp.protein}); });
-                  }
-              });
-
-              updateSNPCounts();
-          }
-
-          function generateSNPForNode(node, index) {
-              const proteinKeys = Object.keys(ecmProteins);
-              const proteinKey = proteinKeys[Math.floor(Math.random() * proteinKeys.length)];
-              const protein = ecmProteins[proteinKey];
-
-              const isNatural = Math.random() < protein.naturalRate;
-              const type = isNatural ? 'natural' : 'mutation';
-
-              return {
-                  id: ${node.data.name}_${proteinKey}_${index},
-                  region: node.data.name,
-                  protein: proteinKey,
-                  proteinName: protein.name,
-                  family: protein.family,
-                  type: type,
-                  pathogenic: !isNatural && Math.random() < 0.3
-              };
-          }
-
-          function generateSNPData() {
-              snpData = [];
-              baseRoot.descendants().filter(d => !d.children).forEach((leaf, idx) => {
-                  const n = 50 + Math.floor(leaf.value * 8);
-                  for (let i=0;i<n;i++) snpData.push(generateSNPForNode(leaf, ${idx}_${i}));
-              });
-          }
-
-          function passesFilters(snp) {
-              const proteinFilter = document.getElementById('proteinFilter').value;
-              const snpTypeFilter = document.getElementById('snpTypeFilter').value;
-
-              if (proteinFilter !== 'all' && snp.family !== proteinFilter) return false;
-              if (snpTypeFilter !== 'all' && snp.type !== snpTypeFilter && !(snpTypeFilter === 'pathogenic' && snp.pathogenic)) return false;
-
-              return true;
-          }
-
-          function getName(d) {
-              return d.ancestors().reverse().map(n => n.data.name).join(" / ");
-          }
-
-          function updatePanels(root) {
-              const path = root.ancestors().reverse().map(n => n.data.name);
-              document.getElementById('currentSystem').textContent = path[1] || 'Whole Body';
-              document.getElementById('currentOrgan').textContent = path.slice(2).join(' / ') || 'All Organs';
-              updateSNPCounts();
-          }
-
-          function zoomIn(d) {
-              const group0 = group.attr("pointer-events", "none");
-              group = svg.append("g").call(render, d);
-
-              x.domain([d.x0, d.x1]);
-              y.domain([d.y0, d.y1]);
-
-              svg.transition().duration(750)
-                  .call(t => group0.transition(t).remove().call(position, d.parent || d))
-                  .call(t => group.transition(t).attrTween("opacity", () => d3.interpolate(0, 1)).call(position, d));
-
-              currentRoot = d;
-              updatePanels(d);
-          }
-
-          function zoomOut(d) {
-              if (!d.parent) return;
-              const group0 = group.attr("pointer-events", "none");
-              group = svg.insert("g", "*").call(render, d.parent);
-
-              x.domain([d.parent.x0, d.parent.x1]);
-              y.domain([d.parent.y0, d.parent.y1]);
-
-              svg.transition().duration(750)
-                  .call(t => group0.transition(t).remove().attrTween("opacity", () => d3.interpolate(1, 0)).call(position, d))
-                  .call(t => group.transition(t).call(position, d.parent));
-
-              currentRoot = d.parent;
-              updatePanels(d.parent);
-          }
-
-          function showSNPDetails(snp) {
-              const el = document.getElementById('snpDetails');
-              el.innerHTML = <p><strong>Protein:</strong> ${snp.proteinName}</p><p><strong>Family:</strong> 
-  ${snp.family}</p><p><strong>Type:</strong> ${snp.type}</p>${snp.pathogenic ? '<p><strong>Pathogenic</strong></p>' : ''};
-          }
-
-          function updateSNPCounts() {
-              const visibleSNPs = snpData.filter(snp => passesFilters(snp) && currentRoot.descendants().some(d => d.data.name === snp.region));
-              const natural = visibleSNPs.filter(d => d.type === 'natural').length;
-              const mutations = visibleSNPs.filter(d => d.type === 'mutation').length;
-
-              document.getElementById('totalSNPs').textContent = visibleSNPs.length;
-              document.getElementById('naturalCount').textContent = natural;
-              document.getElementById('mutationCount').textContent = mutations;
-          }
-
-          function regenerateData() {
-              generateSNPData();
-              addSNPDots(group, currentRoot);
-          }
-
-          function setupEventListeners() {
-              document.getElementById("proteinFilter").addEventListener("change", () => regenerateData());
-              document.getElementById("snpTypeFilter").addEventListener("change", () => regenerateData());
-          }
-
-          init();
-      </script>
-  </body>
-  </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Body SNP Treemap</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        #chart {
+            width: 928px;
+@@ -17,6 +19,7 @@
+</head>
+<body>
+    <h1>Human Body SNP Treemap</h1>
+    <p>Click on system areas to zoom in, click on the header bar to zoom out</p>
+    <div id="chart"></div>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+@@ -94,150 +97,165 @@
+            ]
+        };
+
+        // Specify the chart’s dimensions.
+        // Specify the chart's dimensions.
+        const width = 928;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Body SNP Treemap</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        #chart {
+            width: 928px;
+@@ -17,6 +19,7 @@
+</head>
+<body>
+    <h1>Human Body SNP Treemap</h1>
+    <p>Click on system areas to zoom in, click on the header bar to zoom out</p>
+    <div id="chart"></div>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+@@ -94,150 +97,165 @@
+            ]
+        };
+
+        // Specify the chart’s dimensions.
+        // Specify the chart's dimensions.
+        const width = 928;
+        const height = 924;
+
+        // This custom tiling function adapts the built-in binary tiling function
+        // for the appropriate aspect ratio when the treemap is zoomed-in.
+        function tile(node, x0, y0, x1, y1) {
+            d3.treemapBinary(node, 0, 0, width, height);
+            for (const child of node.children) {
+                child.x0 = x0 + child.x0 / width * (x1 - x0);
+                child.x1 = x0 + child.x1 / width * (x1 - x0);
+                child.y0 = y0 + child.y0 / height * (y1 - y0);
+                child.y1 = y0 + child.y1 / height * (y1 - y0);
+            }
+        }
+
+        // Compute the layout.
+        const hierarchy = d3.hierarchy(human_body_data)
+            .sum(d => d.value)
+            .sort((a, b) => b.value - a.value);
+        const root = d3.treemap().tile(tile)(hierarchy);
+
+        // Create the scales.
+        const x = d3.scaleLinear().rangeRound([0, width]);
+        const y = d3.scaleLinear().rangeRound([0, height]);
+
+        // Color scale for mutation ratio
+        const color = d3.scaleSequential(d3.interpolateRdYlGn).domain([1, 0]);
+
+        // Formatting utilities.
+        const format = d3.format(",d");
+        const name = d => d.ancestors().reverse().map(d => d.data.name).join("/");
+
+        // Create a simple UID generator since DOM.uid isn't available
+        function uid(prefix) {
+            const id = `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
+            return {
+                id: id,
+                href: `#${id}`
+            };
+        }
+
+        // Create the SVG container.
+        const svg = d3.select("#chart").append("svg")
+            .attr("viewBox", [0.5, -30.5, width, height + 30])
+            .attr("width", width)
+            .attr("height", height + 30)
+            .attr("style", "max-width: 100%; height: auto;")
+            .style("font", "10px sans-serif");
+
+        // Display the root.
+        let group = svg.append("g")
+            .call(render, root);
+
+        function render(group, root) {
+            const node = group
+                .selectAll("g")
+                .data(root.children.concat(root))
+                .join("g");
+
+            node.filter(d => d === root ? d.parent : d.children)
+                .attr("cursor", "pointer")
+                .on("click", (event, d) => d === root ? zoomout(root) : zoomin(d));
+
+            node.append("title")
+                .text(d => {
+                    if (d.data.natural_snps && d.data.mutated_snps) {
+                        return `${name(d)}\nNatural SNPs: ${format(d.data.natural_snps)}\nMutated SNPs: ${format(d.data.mutated_snps)}\nMutation Rate: ${((d.data.mutated_snps / (d.data.natural_snps + d.data.mutated_snps)) * 100).toFixed(1)}%`;
+                    } else {
+                        return `${name(d)}\n${format(d.value)}`;
+                    }
+                });
+
+            node.append("rect")
+                .attr("id", d => (d.leafUid = uid("leaf")).id)
+                .attr("fill", d => {
+                    if (d === root) return "#fff";
+                    if (d.children) return "#ccc";
+                    if (d.data.natural_snps && d.data.mutated_snps) {
+                        const ratio = d.data.mutated_snps / (d.data.natural_snps + d.data.mutated_snps);
+                        return color(ratio);
+                    }
+                    return "#ddd";
+                })
+                .attr("fill-opacity", d => d === root || d.children ? 1 : 0.8)
+                .attr("stroke", "#fff");
+
+            node.append("clipPath")
+                .attr("id", d => (d.clipUid = uid("clip")).id)
+                .append("use")
+                .attr("xlink:href", d => d.leafUid.href);
+
+            node.append("text")
+                .attr("clip-path", d => d.clipUid.href)
+                .attr("font-weight", d => d === root ? "bold" : null)
+                .selectAll("tspan")
+                .data(d => {
+                    let nameText = d === root ? name(d) : d.data.name;
+                    let lines = nameText.split(/(?=[A-Z][^A-Z])/g);
+                    
+                    if (d.data.mutated_snps !== undefined) {
+                        lines.push(`Mutations: ${format(d.data.mutated_snps)}`);
+                    } else if (!d.children || d === root) {
+                        lines.push(format(d.value));
+                    }
+                    
+                    return lines;
+                })
+                .join("tspan")
+                .attr("x", 3)
+                .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`)
+                .attr("fill-opacity", (d, i, nodes) => i === nodes.length - 1 ? 0.7 : null)
+                .attr("font-weight", (d, i, nodes) => i === nodes.length - 1 ? "normal" : null)
+                .text(d => d);
+
+            group.call(position, root);
+        }
+
+        function position(group, root) {
+            group.selectAll("g")
+                .attr("transform", d => d === root ? `translate(0,-30)` : `translate(${x(d.x0)},${y(d.y0)})`)
+                .select("rect")
+                .attr("width", d => d === root ? width : x(d.x1) - x(d.x0))
+                .attr("height", d => d === root ? 30 : y(d.y1) - y(d.y0));
+        }
+
+        // When zooming in, draw the new nodes on top, and fade them in.
+        function zoomin(d) {
+            const group0 = group.attr("pointer-events", "none");
+            const group1 = group = svg.append("g").call(render, d);
+
+            x.domain([d.x0, d.x1]);
+            y.domain([d.y0, d.y1]);
+
+            svg.transition()
+                .duration(750)
+                .call(t => group0.transition(t).remove()
+                    .call(position, d.parent))
+                .call(t => group1.transition(t)
+                    .attrTween("opacity", () => d3.interpolate(0, 1))
+                    .call(position, d));
+        }
+
+        // When zooming out, draw the old nodes on top, and fade them out.
+        function zoomout(d) {
+            const group0 = group.attr("pointer-events", "none");
+            const group1 = group = svg.insert("g", "*").call(render, d.parent);
+
+            x.domain([d.parent.x0, d.parent.x1]);
+            y.domain([d.parent.y0, d.parent.y1]);
+
+            svg.transition()
+                .duration(750)
+                .call(t => group0.transition(t).remove()
+                    .attrTween("opacity", () => d3.interpolate(1, 0))
+                    .call(position, d))
+                .call(t => group1.transition(t)
+                    .call(position, d.parent));
+        }
+    </script>
+</body>
+</html>
