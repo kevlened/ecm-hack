@@ -6,91 +6,98 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f9f9f9;
       display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      gap: 30px;
-      padding: 30px;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    h1 {
+      margin-bottom: 20px;
     }
     svg {
       width: 250px;
       cursor: pointer;
+      margin-bottom: 20px;
     }
-    .info-panel {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      width: 300px;
-    }
-    .info-panel h2 {
-      margin-top: 0;
+    #infoBox {
+      width: 400px;
+      padding: 15px;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
     .highlight {
       fill: red;
       opacity: 0.6;
-      transition: opacity 0.3s;
-    }
-    .highlight:hover {
-      opacity: 0.9;
     }
   </style>
 </head>
 <body>
+  <h1>ECM SNP Explorer</h1>
 
-  <!-- Body Diagram with clickable heart -->
-  <svg viewBox="0 0 200 400">
-    <rect x="80" y="50" width="40" height="300" fill="#ccc" stroke="#333"/>
-    <!-- Heart region -->
-    <circle id="heart" cx="100" cy="150" r="20" class="highlight"/>
+  <!-- Simple human body SVG with a highlighted heart region -->
+  <svg viewBox="0 0 200 500">
+    <rect x="80" y="50" width="40" height="300" fill="#ccc" stroke="black"/>
+    <!-- Heart clickable area -->
+    <circle id="heart" cx="100" cy="150" r="20" fill="red" class="highlight"/>
   </svg>
 
-  <!-- Info panel -->
-  <div class="info-panel" id="infoPanel">
-    <h2>Click on the heart</h2>
-    <p>Details will appear here.</p>
+  <!-- Info box for displaying details -->
+  <div id="infoBox">
+    <h2>Click on an organ to see details</h2>
+    <p id="details">No organ selected yet.</p>
   </div>
 
   <script>
-    // Example dataset
-    const snpData = {
+    // Example dataset (you can expand with real SNP/protein data)
+    const organData = {
       heart: {
-        protein: "Collagen IV",
-        system: "Circulatory",
-        location: "Left ventricle ECM",
-        type: "Missense Mutation",
-        stats: {
-          system: "Circulatory",
-          organ: "Heart",
-          proteinsCount: 128,
-          snpsCount: 452,
-          natural: 320,
-          mutations: 132
-        }
+        proteins: [
+          { name: "Collagen I", system: "Circulatory", location: "ECM", type: "Structural", snps: 4, natural: 3, mutations: 1 },
+          { name: "Elastin", system: "Circulatory", location: "ECM", type: "Elastic", snps: 2, natural: 1, mutations: 1 }
+        ]
       }
     };
 
-    const heart = document.getElementById("heart");
-    const infoPanel = document.getElementById("infoPanel");
+    // Helper to render info
+    function renderOrganInfo(organ) {
+      const data = organData[organ];
+      if (!data) return;
 
-    heart.addEventListener("click", () => {
-      const data = snpData.heart;
-      infoPanel.innerHTML = `
-        <h2>Heart SNP Info</h2>
-        <p><strong>Protein:</strong> ${data.protein}</p>
-        <p><strong>System:</strong> ${data.system}</p>
-        <p><strong>Location:</strong> ${data.location}</p>
-        <p><strong>Type:</strong> ${data.type}</p>
-        <hr>
-        <h3>System Stats</h3>
-        <p><strong>System:</strong> ${data.stats.system}</p>
-        <p><strong>Organ:</strong> ${data.stats.organ}</p>
-        <p><strong>ECM Proteins:</strong> ${data.stats.proteinsCount}</p>
-        <p><strong>Total SNPs:</strong> ${data.stats.snpsCount}</p>
-        <p><strong>Natural SNPs:</strong> ${data.stats.natural}</p>
-        <p><strong>Mutations:</strong> ${data.stats.mutations}</p>
+      let totalProteins = data.proteins.length;
+      let totalSnps = data.proteins.reduce((sum, p) => sum + p.snps, 0);
+      let totalNatural = data.proteins.reduce((sum, p) => sum + p.natural, 0);
+      let totalMutations = data.proteins.reduce((sum, p) => sum + p.mutations, 0);
+
+      let html = `<h2>Heart Details</h2>`;
+      data.proteins.forEach(p => {
+        html += `
+          <p>
+            <strong>Protein:</strong> ${p.name}<br>
+            <strong>System:</strong> ${p.system}<br>
+            <strong>Location:</strong> ${p.location}<br>
+            <strong>Type:</strong> ${p.type}<br>
+            <strong>SNPs:</strong> ${p.snps} 
+            (Natural: ${p.natural}, Mutations: ${p.mutations})
+          </p>
+          <hr>
+        `;
+      });
+
+      html += `
+        <p><strong>Total Proteins:</strong> ${totalProteins}</p>
+        <p><strong>Total SNPs:</strong> ${totalSnps}</p>
+        <p><strong>Natural SNPs:</strong> ${totalNatural}</p>
+        <p><strong>Mutations:</strong> ${totalMutations}</p>
       `;
+
+      document.getElementById("details").innerHTML = html;
+    }
+
+    // Attach click event to heart
+    document.getElementById("heart").addEventListener("click", () => {
+      renderOrganInfo("heart");
     });
   </script>
 </body>
