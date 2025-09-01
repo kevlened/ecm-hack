@@ -48,6 +48,11 @@ export default function BodyMap() {
     setSelectedOrgan(snp.organ);
   };
 
+  const handleOrganClick = (organ: string) => {
+    setSelectedOrgan(organ);
+    setSelectedSnp(null); // clear SNP selection
+  };
+
   const organStats = selectedOrgan ? getOrganStats(selectedOrgan) : null;
 
   return (
@@ -58,7 +63,7 @@ export default function BodyMap() {
           viewBox="0 0 200 400"
           className="w-full h-full border rounded-2xl shadow-md"
         >
-          {/* Heart Area */}
+          {/* Heart Area (click for stats) */}
           <motion.circle
             cx="100"
             cy="150"
@@ -66,17 +71,18 @@ export default function BodyMap() {
             fill="#ff4d6d"
             className="cursor-pointer"
             whileHover={{ scale: 1.1 }}
-            onClick={() => handleSnpClick(snps[0])} // Example: clicking heart picks first SNP
+            onClick={() => handleOrganClick("Heart")}
           />
+
           {/* Example SNP markers inside heart */}
           {snps
             .filter((s) => s.organ === "Heart")
             .map((snp, idx) => (
               <motion.circle
                 key={snp.id}
-                cx={100 + idx * 8 - 8}
+                cx={100 + idx * 12 - 12}
                 cy={150 + (idx % 2 === 0 ? -10 : 10)}
-                r="5"
+                r="6"
                 fill={snp.type === "mutation" ? "#000" : "#fff"}
                 stroke="#333"
                 className="cursor-pointer"
@@ -91,19 +97,18 @@ export default function BodyMap() {
       <Card className="w-1/2">
         <CardContent className="space-y-4">
           <h2 className="text-xl font-bold">Details</h2>
+
           {selectedSnp ? (
-            <>
-              <div>
-                <h3 className="font-semibold">Selected SNP</h3>
-                <p><strong>Protein:</strong> {selectedSnp.protein}</p>
-                <p><strong>System:</strong> {selectedSnp.system}</p>
-                <p><strong>Organ:</strong> {selectedSnp.organ}</p>
-                <p><strong>Location:</strong> {selectedSnp.location}</p>
-                <p><strong>Type:</strong> {selectedSnp.type}</p>
-              </div>
-            </>
+            <div>
+              <h3 className="font-semibold">Selected SNP</h3>
+              <p><strong>Protein:</strong> {selectedSnp.protein}</p>
+              <p><strong>System:</strong> {selectedSnp.system}</p>
+              <p><strong>Organ:</strong> {selectedSnp.organ}</p>
+              <p><strong>Location:</strong> {selectedSnp.location}</p>
+              <p><strong>Type:</strong> {selectedSnp.type}</p>
+            </div>
           ) : (
-            <p className="text-gray-500">Click on a SNP to see details</p>
+            <p className="text-gray-500">Click a SNP or organ to see details</p>
           )}
 
           {organStats && (
@@ -122,4 +127,3 @@ export default function BodyMap() {
     </div>
   );
 }
-                  
