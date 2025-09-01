@@ -1,125 +1,161 @@
-chart = {
-  // Specify the chart’s dimensions.
-  const width = 928;
-  const height = 924;
-
-  // This custom tiling function adapts the built-in binary tiling function
-  // for the appropriate aspect ratio when the treemap is zoomed-in.
-  function tile(node, x0, y0, x1, y1) {
-    d3.treemapBinary(node, 0, 0, width, height);
-    for (const child of node.children) {
-      child.x0 = x0 + child.x0 / width * (x1 - x0);
-      child.x1 = x0 + child.x1 / width * (x1 - x0);
-      child.y0 = y0 + child.y0 / height * (y1 - y0);
-      child.y1 = y0 + child.y1 / height * (y1 - y0);
-    }
-  }
-
-  // Compute the layout.
-  const hierarchy = d3.hierarchy(data)
-    .sum(d => d.value)
-    .sort((a, b) => b.value - a.value);
-  const root = d3.treemap().tile(tile)(hierarchy);
-
-  // Create the scales.
-  const x = d3.scaleLinear().rangeRound([0, width]);
-  const y = d3.scaleLinear().rangeRound([0, height]);
-
-  // Formatting utilities.
-  const format = d3.format(",d");
-  const name = d => d.ancestors().reverse().map(d => d.data.name).join("/");
-
-  // Create the SVG container.
-  const svg = d3.create("svg")
-      .attr("viewBox", [0.5, -30.5, width, height + 30])
-      .attr("width", width)
-      .attr("height", height + 30)
-      .attr("style", "max-width: 100%; height: auto;")
-      .style("font", "10px sans-serif");
-
-  // Display the root.
-  let group = svg.append("g")
-      .call(render, root);
-
-  function render(group, root) {
-    const node = group
-      .selectAll("g")
-      .data(root.children.concat(root))
-      .join("g");
-
-    node.filter(d => d === root ? d.parent : d.children)
-        .attr("cursor", "pointer")
-        .on("click", (event, d) => d === root ? zoomout(root) : zoomin(d));
-
-    node.append("title")
-        .text(d => `${name(d)}\n${format(d.value)}`);
-
-    node.append("rect")
-        .attr("id", d => (d.leafUid = DOM.uid("leaf")).id)
-        .attr("fill", d => d === root ? "#fff" : d.children ? "#ccc" : "#ddd")
-        .attr("stroke", "#fff");
-
-    node.append("clipPath")
-        .attr("id", d => (d.clipUid = DOM.uid("clip")).id)
-      .append("use")
-        .attr("xlink:href", d => d.leafUid.href);
-
-    node.append("text")
-        .attr("clip-path", d => d.clipUid)
-        .attr("font-weight", d => d === root ? "bold" : null)
-      .selectAll("tspan")
-      .data(d => (d === root ? name(d) : d.data.name).split(/(?=[A-Z][^A-Z])/g).concat(format(d.value)))
-      .join("tspan")
-        .attr("x", 3)
-        .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`)
-        .attr("fill-opacity", (d, i, nodes) => i === nodes.length - 1 ? 0.7 : null)
-        .attr("font-weight", (d, i, nodes) => i === nodes.length - 1 ? "normal" : null)
-        .text(d => d);
-
-    group.call(position, root);
-  }
-
-  function position(group, root) {
-    group.selectAll("g")
-        .attr("transform", d => d === root ? `translate(0,-30)` : `translate(${x(d.x0)},${y(d.y0)})`)
-      .select("rect")
-        .attr("width", d => d === root ? width : x(d.x1) - x(d.x0))
-        .attr("height", d => d === root ? 30 : y(d.y1) - y(d.y0));
-  }
-
-  // When zooming in, draw the new nodes on top, and fade them in.
-  function zoomin(d) {
-    const group0 = group.attr("pointer-events", "none");
-    const group1 = group = svg.append("g").call(render, d);
-
-    x.domain([d.x0, d.x1]);
-    y.domain([d.y0, d.y1]);
-
-    svg.transition()
-        .duration(750)
-        .call(t => group0.transition(t).remove()
-          .call(position, d.parent))
-        .call(t => group1.transition(t)
-          .attrTween("opacity", () => d3.interpolate(0, 1))
-          .call(position, d));
-  }
-
-  // When zooming out, draw the old nodes on top, and fade them out.
-  function zoomout(d) {
-    const group0 = group.attr("pointer-events", "none");
-    const group1 = group = svg.insert("g", "*").call(render, d.parent);
-
-    x.domain([d.parent.x0, d.parent.x1]);
-    y.domain([d.parent.y0, d.parent.y1]);
-
-    svg.transition()
-        .duration(750)
-        .call(t => group0.transition(t).remove()
-          .attrTween("opacity", () => d3.interpolate(1, 0))
-          .call(position, d))
-        .call(t => group1.transition(t)
-          .call(position, d.parent));
-  }
-
-  return svg.node();
-}
+<!DOCTYPE html>                                                                                                                      │
+ │      2 <html lang="en">                                                                                                                     │
+ │      3 <head>                                                                                                                               │
+ │      4     <meta charset="UTF-8">                                                                                                           │
+ │      5     <meta name="viewport" content="width=device-width, initial-scale=1.0">                                                           │
+ │      6     <title>Human Body SNP Treemap</title>                                                                                            │
+ │      7     <style>                                                                                                                          │
+ │      8         body {                                                                                                                       │
+ │      9             font-family: sans-serif;                                                                                                 │
+ │     10             text-align: center;                                                                                                      │
+ │     11         }                                                                                                                            │
+ │     12         #chart {                                                                                                                     │
+ │     13             width: 928px;                                                                                                            │
+ │     14             margin: 0 auto;                                                                                                          │
+ │     15         }                                                                                                                            │
+ │     16     </style>                                                                                                                         │
+ │     17 </head>                                                                                                                              │
+ │     18 <body>                                                                                                                               │
+ │     19     <h1>Human Body SNP Treemap</h1>                                                                                                  │
+ │     20     <div id="chart"></div>                                                                                                           │
+ │     21     <script src="https://d3js.org/d3.v7.min.js"></script>                                                                            │
+ │     22     <script>                                                                                                                         │
+ │     23         const human_body_data = {                                                                                                    │
+ │     24             "name": "Human Body",                                                                                                    │
+ │     25             "children": [                                                                                                            │
+ │     26                 {                                                                                                                    │
+ │     27                     "name": "Nervous System",                                                                                        │
+ │     28                     "children": [                                                                                                    │
+ │     29                         {                                                                                                            │
+ │     30                             "name": "Brain",                                                                                         │
+ │     31                             "value": 100,                                                                                            │
+ │     32                             "natural_snps": 1000,                                                                                    │
+ │     33                             "mutated_snps": 50                                                                                       │
+ │     34                         },                                                                                                           │
+ │     35                         {                                                                                                            │
+ │     36                             "name": "Spinal Cord",                                                                                   │
+ │     37                             "value": 20,                                                                                             │
+ │     38                             "natural_snps": 200,                                                                                     │
+ │     39                             "mutated_snps": 5                                                                                        │
+ │     40                         }                                                                                                            │
+ │     41                     ]                                                                                                                │
+ │     42                 },                                                                                                                   │
+ │     43                 {                                                                                                                    │
+ │     44                     "name": "Cardiovascular System",                                                                                 │
+ │     45                     "children": [                                                                                                    │
+ │     46                         {                                                                                                            │
+ │     47                             "name": "Heart",                                                                                         │
+ │     48                             "value": 50,                                                                                             │
+ │     49                             "natural_snps": 500,                                                                                     │
+ │     50                             "mutated_snps": 25                                                                                       │
+ │     51                         },                                                                                                           │
+ │     52                         {                                                                                                            │
+ │     53                             "name": "Blood Vessels",                                                                                 │
+ │     54                             "value": 30,                                                                                             │
+ │     55                             "natural_snps": 300,                                                                                     │
+ │     56                             "mutated_snps": 100                                                                                      │
+ │     57                         }                                                                                                            │
+ │     58                     ]                                                                                                                │
+ │     59                 },                                                                                                                   │
+ │     60                 {                                                                                                                    │
+ │     61                     "name": "Respiratory System",                                                                                    │
+ │     62                     "children": [                                                                                                    │
+ │     63                         {                                                                                                            │
+ │     64                             "name": "Lungs",                                                                                         │
+ │     65                             "value": 60,                                                                                             │
+ │     66                             "natural_snps": 600,                                                                                     │
+ │     67                             "mutated_snps": 120                                                                                      │
+ │     68                         }                                                                                                            │
+ │     69                     ]                                                                                                                │
+ │     70                 },                                                                                                                   │
+ │     71                 {                                                                                                                    │
+ │     72                     "name": "Digestive System",                                                                                      │
+ │     73                     "children": [                                                                                                    │
+ │     74                         {                                                                                                            │
+ │     75                             "name": "Stomach",                                                                                       │
+ │     76                             "value": 40,                                                                                             │
+ │     77                             "natural_snps": 400,                                                                                     │
+ │     78                             "mutated_snps": 10                                                                                       │
+ │     79                         },                                                                                                           │
+ │     80                         {                                                                                                            │
+ │     81                             "name": "Liver",                                                                                         │
+ │     82                             "value": 45,                                                                                             │
+ │     83                             "natural_snps": 450,                                                                                     │
+ │     84                             "mutated_snps": 80                                                                                       │
+ │     85                         },                                                                                                           │
+ │     86                         {                                                                                                            │
+ │     87                             "name": "Intestines",                                                                                    │
+ │     88                             "value": 55,                                                                                             │
+ │     89                             "natural_snps": 550,                                                                                     │
+ │     90                             "mutated_snps": 200                                                                                      │
+ │     91                         }                                                                                                            │
+ │     92                     ]                                                                                                                │
+ │     93                 }                                                                                                                    │
+ │     94             ]                                                                                                                        │
+ │     95         };                                                                                                                           │
+ │     96                                                                                                                                      │
+ │     97         // Specify the chart’s dimensions.                                                                                           │
+ │     98         const width = 1154;                                                                                                          │
+ │     99         const height = 1154;                                                                                                         │
+ │    100                                                                                                                                      │
+ │    101         // Specify the color scale.                                                                                                  │
+ │    102         const color = d3.scaleSequential(d3.interpolateRdYlGn).domain([1, 0]);                                                       │
+ │    103                                                                                                                                      │
+ │    104         // Compute the layout.                                                                                                       │
+ │    105         const root = d3.treemap()                                                                                                    │
+ │    106             .size([width, height])                                                                                                   │
+ │    107             .padding(1)                                                                                                              │
+ │    108             .round(true)                                                                                                             │
+ │    109             (d3.hierarchy(human_body_data)                                                                                           │
+ │    110                 .sum(d => d.value)                                                                                                   │
+ │    111                 .sort((a, b) => b.value - a.value));                                                                                 │
+ │    112                                                                                                                                      │
+ │    113         // Create the SVG container.                                                                                                 │
+ │    114         const svg = d3.select("#chart").append("svg")                                                                                │
+ │    115             .attr("viewBox", [0, 0, width, height])                                                                                  │
+ │    116             .attr("width", width)                                                                                                    │
+ │    117             .attr("height", height)                                                                                                  │
+ │    118             .attr("style", "max-width: 100%; height: auto; font: 10px sans-serif;");                                                 │
+ │    119                                                                                                                                      │
+ │    120         // Add a cell for each leaf of the hierarchy.                                                                                │
+ │    121         const leaf = svg.selectAll("g")                                                                                              │
+ │    122             .data(root.leaves())                                                                                                     │
+ │    123             .join("g")                                                                                                               │
+ │    124             .attr("transform", d => `translate(${d.x0},${d.y0})`);                                                                   │
+ │    125                                                                                                                                      │
+ │    126         // Append a tooltip.                                                                                                         │
+ │    127         const format = d3.format(",d");                                                                                              │
+ │    128         leaf.append("title")                                                                                                         │
+ │    129             .text(d => `${d.ancestors().reverse().map(d => d.data.name).join("/")}\nNatural SNPs:                                    │
+ │        ${format(d.data.natural_snps)}\nMutated SNPs: ${format(d.data.mutated_snps)}`);                                                      │
+ │    130                                                                                                                                      │
+ │    131         // Append a color rectangle.                                                                                                 │
+ │    132         leaf.append("rect")                                                                                                          │
+ │    133             .attr("id", d => `leaf-${Math.random()}`)                                                                                │
+ │    134             .attr("fill", d => {                                                                                                     │
+ │    135                 const ratio = d.data.mutated_snps / (d.data.natural_snps + d.data.mutated_snps);                                     │
+ │    136                 return color(ratio);                                                                                                 │
+ │    137             })                                                                                                                       │
+ │    138             .attr("fill-opacity", 0.8)                                                                                               │
+ │    139             .attr("width", d => d.x1 - d.x0)                                                                                         │
+ │    140             .attr("height", d => d.y1 - d.y0);                                                                                       │
+ │    141                                                                                                                                      │
+ │    142         // Append a clipPath to ensure text does not overflow.                                                                       │
+ │    143         leaf.append("clipPath")                                                                                                      │
+ │    144             .attr("id", d => `clip-${Math.random()}`)                                                                                │
+ │    145             .append("use")                                                                                                           │
+ │    146             .attr("xlink:href", d => `#${d.leafUid}`);                                                                               │
+ │    147                                                                                                                                      │
+ │    148         // Append multiline text. The last line shows the value and has a specific formatting.                                       │
+ │    149         leaf.append("text")                                                                                                          │
+ │    150             .selectAll("tspan")                                                                                                      │
+ │    151             .data(d => d.data.name.split(/(?=[A-Z][a-z])|\s+/g).concat(`Mutations: ${format(d.data.mutated_snps)}`))                 │
+ │    152             .join("tspan")                                                                                                           │
+ │    153             .attr("x", 3)                                                                                                            │
+ │    154             .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`)                                       │
+ │    155             .attr("fill-opacity", (d, i, nodes) => i === nodes.length - 1 ? 0.7 : null)                                              │
+ │    156             .text(d => d);                                                                                                           │
+ │    157                                                                                                                                      │
+ │    158     </script>                                                                                                                        │
+ │    159 </body>                                                                                                                              │
+ │    160 </html>                        
