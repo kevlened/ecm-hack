@@ -1,104 +1,209 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>ECM SNP Explorer</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-      background: #f4f4f4;
-    }
-    h1 {
-      margin-bottom: 20px;
-    }
-    svg {
-      width: 250px;
-      cursor: pointer;
-      margin-bottom: 20px;
-    }
-    #infoBox {
-      width: 400px;
-      padding: 15px;
-      border-radius: 10px;
-      background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
-    .highlight {
-      fill: red;
-      opacity: 0.6;
-    }
-  </style>
-</head>
-<body>
-  <h1>ECM SNP Explorer</h1>
+import { ECMSnp, BodySystem } from '../types/ecm';
 
-  <!-- Simple human body SVG with a highlighted heart region -->
-  <svg viewBox="0 0 200 500">
-    <rect x="80" y="50" width="40" height="300" fill="#ccc" stroke="black"/>
-    <!-- Heart clickable area -->
-    <circle id="heart" cx="100" cy="150" r="20" fill="red" class="highlight"/>
-  </svg>
-
-  <!-- Info box for displaying details -->
-  <div id="infoBox">
-    <h2>Click on an organ to see details</h2>
-    <p id="details">No organ selected yet.</p>
-  </div>
-
-  <script>
-    // Example dataset (you can expand with real SNP/protein data)
-    const organData = {
-      heart: {
-        proteins: [
-          { name: "Collagen I", system: "Circulatory", location: "ECM", type: "Structural", snps: 4, natural: 3, mutations: 1 },
-          { name: "Elastin", system: "Circulatory", location: "ECM", type: "Elastic", snps: 2, natural: 1, mutations: 1 }
-        ]
+export const mockECMSnps: ECMSnp[] = [
+  {
+    id: 'snp1',
+    proteinName: 'Collagen VI',
+    system: 'Musculoskeletal',
+    location: 'Femur cortical bone',
+    type: 'mutation',
+    position: { x: 45, y: 65 },
+    papers: [
+      {
+        title: 'A Comprehensive Review of Genetic Variations in Collagen',
+        url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10880043/',
+        authors: 'Comprehensive research on collagen genetic variations'
+      },
+      {
+        title: 'Restored Collagen VI Microfilaments Network in the Extracellular Matrix',
+        url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11591638/',
+        authors: 'Advanced collagen VI restoration studies'
       }
-    };
+    ],
+    protocols: [
+      {
+        title: 'Methods for visualization and analysis of extracellular matrix',
+        url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6317720/',
+        method: 'Immunohistochemistry and microscopy'
+      }
+    ]
+  },
+  {
+    id: 'snp2',
+    proteinName: 'Elastin',
+    system: 'Cardiovascular',
+    location: 'Aortic wall',
+    type: 'mutation',
+    position: { x: 50, y: 35 },
+    papers: [
+      {
+        title: 'Identification and characterization of novel elastin gene mutations in eleven families with supravalvular aortic stenosis',
+        url: 'https://www.frontiersin.org/articles/10.3389/fgene.2022.1059640/full',
+        authors: 'Frontiers in Genetics research team'
+      },
+      {
+        title: 'Extracellular Matrix Regulatory Genes ZNF469 and PRDM5 in Aortic Aneurysmal Diseases',
+        url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11172047/',
+        authors: 'ECM regulatory genes research'
+      }
+    ],
+    protocols: [
+      {
+        title: 'Protocol for extraction and characterization of ECM',
+        url: 'https://www.sciencedirect.com/science/article/pii/S2666166725001704',
+        method: 'Decellularization and ECM extraction'
+      }
+    ]
+  },
+  {
+    id: 'snp3',
+    proteinName: 'Fibronectin',
+    system: 'Integumentary',
+    location: 'Dermal matrix',
+    type: 'natural',
+    position: { x: 40, y: 25 },
+    papers: [
+      {
+        title: 'The Role of the Extracellular Matrix (ECM) in Wound Healing',
+        url: 'https://ncbi.nlm.nih.gov/pmc/articles/PMC9326521/',
+        authors: 'MDPI wound healing research'
+      },
+      {
+        title: 'Integrins regulation of wound healing processes',
+        url: 'https://www.frontiersin.org/journals/cellular-and-infection-microbiology/articles/10.3389/fcimb.2024.1324441/full',
+        authors: 'Frontiers in Cellular and Infection Microbiology'
+      }
+    ],
+    protocols: [
+      {
+        title: 'A Rapid, Scalable Method for ECM Isolation and Functional Study',
+        url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC5351878/',
+        method: 'ECM isolation and characterization'
+      }
+    ]
+  },
+  {
+    id: 'snp4',
+    proteinName: 'Laminin',
+    system: 'Nervous',
+    location: 'Blood-brain barrier',
+    type: 'natural',
+    position: { x: 50, y: 15 },
+    papers: [
+      {
+        title: 'The importance of laminin at the blood-brain barrier',
+        url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10358660/',
+        authors: 'Neural Regeneration Research'
+      },
+      {
+        title: 'The impact of genetic manipulation of laminin and integrins at the blood–brain barrier',
+        url: 'https://fluidsbarrierscns.biomedcentral.com/articles/10.1186/s12987-022-00346-8',
+        authors: 'Fluids and Barriers of the CNS'
+      }
+    ],
+    protocols: [
+      {
+        title: 'Protocol for extraction and characterization of mouse brain-derived ECM',
+        url: 'https://www.sciencedirect.com/science/article/pii/S2666166725001704',
+        method: 'Brain decellularization and ECM isolation'
+      }
+    ]
+  },
+  {
+    id: 'snp5',
+    proteinName: 'Hyaluronic acid',
+    system: 'Respiratory',
+    location: 'Pulmonary alveoli',
+    type: 'mutation',
+    position: { x: 48, y: 30 },
+    papers: [
+      {
+        title: 'Hyaluronan and Its Interactions With Immune Cells in the Healthy and Inflamed Lung',
+        url: 'https://ncbi.nlm.nih.gov/pmc/articles/PMC6281886/',
+        authors: 'Frontiers in Immunology research'
+      },
+      {
+        title: 'Evolution of high-molecular-mass hyaluronic acid is associated with cancer resistance',
+        url: 'https://www.nature.com/articles/s41467-023-43623-2',
+        authors: 'Nature Communications'
+      }
+    ],
+    protocols: [
+      {
+        title: 'Methods for the visualization and analysis of extracellular matrix',
+        url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6317720/',
+        method: 'HA quantification and analysis'
+      }
+    ]
+  },
+  {
+    id: 'snp6',
+    proteinName: 'Proteoglycan',
+    system: 'Musculoskeletal',
+    location: 'Knee cartilage',
+    type: 'natural',
+    position: { x: 47, y: 70 },
+    papers: [
+      {
+        title: 'Hyaluronan as an Immune Regulator in Human Diseases',
+        url: 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3051404/',
+        authors: 'Physiological Reviews'
+      }
+    ],
+    protocols: [
+      {
+        title: 'A Rapid, Scalable Method for ECM Isolation',
+        url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC5351878/',
+        method: 'Proteoglycan extraction and purification'
+      }
+    ]
+  }
+];
 
-    // Helper to render info
-    function renderOrganInfo(organ) {
-      const data = organData[organ];
-      if (!data) return;
-
-      let totalProteins = data.proteins.length;
-      let totalSnps = data.proteins.reduce((sum, p) => sum + p.snps, 0);
-      let totalNatural = data.proteins.reduce((sum, p) => sum + p.natural, 0);
-      let totalMutations = data.proteins.reduce((sum, p) => sum + p.mutations, 0);
-
-      let html = `<h2>Heart Details</h2>`;
-      data.proteins.forEach(p => {
-        html += `
-          <p>
-            <strong>Protein:</strong> ${p.name}<br>
-            <strong>System:</strong> ${p.system}<br>
-            <strong>Location:</strong> ${p.location}<br>
-            <strong>Type:</strong> ${p.type}<br>
-            <strong>SNPs:</strong> ${p.snps} 
-            (Natural: ${p.natural}, Mutations: ${p.mutations})
-          </p>
-          <hr>
-        `;
-      });
-
-      html += `
-        <p><strong>Total Proteins:</strong> ${totalProteins}</p>
-        <p><strong>Total SNPs:</strong> ${totalSnps}</p>
-        <p><strong>Natural SNPs:</strong> ${totalNatural}</p>
-        <p><strong>Mutations:</strong> ${totalMutations}</p>
-      `;
-
-      document.getElementById("details").innerHTML = html;
-    }
-
-    // Attach click event to heart
-    document.getElementById("heart").addEventListener("click", () => {
-      renderOrganInfo("heart");
-    });
-  </script>
-</body>
-</html>
+export const bodySystems: BodySystem[] = [
+  {
+    id: 'musculoskeletal',
+    name: 'Musculoskeletal System',
+    region: 'Full body',
+    snps: mockECMSnps.filter(snp => snp.system === 'Musculoskeletal'),
+    ecmProteinCount: 25,
+    naturalSnpsCount: 15,
+    mutationSnpsCount: 8
+  },
+  {
+    id: 'cardiovascular',
+    name: 'Cardiovascular System',
+    region: 'Thoracic cavity',
+    snps: mockECMSnps.filter(snp => snp.system === 'Cardiovascular'),
+    ecmProteinCount: 18,
+    naturalSnpsCount: 10,
+    mutationSnpsCount: 6
+  },
+  {
+    id: 'integumentary',
+    name: 'Integumentary System',
+    region: 'Skin surface',
+    snps: mockECMSnps.filter(snp => snp.system === 'Integumentary'),
+    ecmProteinCount: 22,
+    naturalSnpsCount: 12,
+    mutationSnpsCount: 4
+  },
+  {
+    id: 'nervous',
+    name: 'Nervous System',
+    region: 'Central nervous system',
+    snps: mockECMSnps.filter(snp => snp.system === 'Nervous'),
+    ecmProteinCount: 16,
+    naturalSnpsCount: 8,
+    mutationSnpsCount: 3
+  },
+  {
+    id: 'respiratory',
+    name: 'Respiratory System',
+    region: 'Thoracic cavity',
+    snps: mockECMSnps.filter(snp => snp.system === 'Respiratory'),
+    ecmProteinCount: 14,
+    naturalSnpsCount: 7,
+    mutationSnpsCount: 5
+  }
+];
