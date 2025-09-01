@@ -1,261 +1,125 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Human Body SNP Treemap</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-        }
-        #chart {
-            width: 928px;
-            margin: 0 auto;
-        }
-    </style>
-</head>
-<body>
-    <h1>Human Body SNP Treemap</h1>
-    <p>Click on system areas to zoom in, click on the header bar to zoom out</p>
-    <div id="chart"></div>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script>
-        const human_body_data = {
-            "name": "Human Body",
-            "children": [
-                {
-                    "name": "Nervous System",
-                    "children": [
-                        {
-                            "name": "Brain",
-                            "value": 100,
-                            "natural_snps": 1000,
-                            "mutated_snps": 50
-                        },
-                        {
-                            "name": "Spinal Cord",
-                            "value": 20,
-                            "natural_snps": 200,
-                            "mutated_snps": 5
-                        }
-                    ]
-                },
-                {
-                    "name": "Cardiovascular System",
-                    "children": [
-                        {
-                            "name": "Heart",
-                            "value": 50,
-                            "natural_snps": 500,
-                            "mutated_snps": 25
-                        },
-                        {
-                            "name": "Blood Vessels",
-                            "value": 30,
-                            "natural_snps": 300,
-                            "mutated_snps": 100
-                        }
-                    ]
-                },
-                {
-                    "name": "Respiratory System",
-                    "children": [
-                        {
-                            "name": "Lungs",
-                            "value": 60,
-                            "natural_snps": 600,
-                            "mutated_snps": 120
-                        }
-                    ]
-                },
-                {
-                    "name": "Digestive System",
-                    "children": [
-                        {
-                            "name": "Stomach",
-                            "value": 40,
-                            "natural_snps": 400,
-                            "mutated_snps": 10
-                        },
-                        {
-                            "name": "Liver",
-                            "value": 45,
-                            "natural_snps": 450,
-                            "mutated_snps": 80
-                        },
-                        {
-                            "name": "Intestines",
-                            "value": 55,
-                            "natural_snps": 550,
-                            "mutated_snps": 200
-                        }
-                    ]
-                }
-            ]
-        };
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { motion } from "framer-motion";
 
-        // Specify the chart's dimensions.
-        const width = 928;
-        const height = 924;
+type SNP = {
+  id: string;
+  protein: string;
+  system: string;
+  organ: string;
+  location: string;
+  type: "natural" | "mutation";
+};
 
-        // This custom tiling function adapts the built-in binary tiling function
-        // for the appropriate aspect ratio when the treemap is zoomed-in.
-        function tile(node, x0, y0, x1, y1) {
-            d3.treemapBinary(node, 0, 0, width, height);
-            for (const child of node.children) {
-                child.x0 = x0 + child.x0 / width * (x1 - x0);
-                child.x1 = x0 + child.x1 / width * (x1 - x0);
-                child.y0 = y0 + child.y0 / height * (y1 - y0);
-                child.y1 = y0 + child.y1 / height * (y1 - y0);
-            }
-        }
+type OrganStats = {
+  system: string;
+  organ: string;
+  proteinCount: number;
+  snpCount: number;
+  naturalCount: number;
+  mutationCount: number;
+};
 
-        // Compute the layout.
-        const hierarchy = d3.hierarchy(human_body_data)
-            .sum(d => d.value)
-            .sort((a, b) => b.value - a.value);
-        const root = d3.treemap().tile(tile)(hierarchy);
+const snps: SNP[] = [
+  { id: "snp1", protein: "Collagen I", system: "Circulatory", organ: "Heart", location: "Chromosome 7", type: "mutation" },
+  { id: "snp2", protein: "Elastin", system: "Circulatory", organ: "Heart", location: "Chromosome 2", type: "natural" },
+  { id: "snp3", protein: "Fibronectin", system: "Circulatory", organ: "Heart", location: "Chromosome 5", type: "mutation" },
+  // ...add more SNPs
+];
 
-        // Create the scales.
-        const x = d3.scaleLinear().rangeRound([0, width]);
-        const y = d3.scaleLinear().rangeRound([0, height]);
+function getOrganStats(organ: string): OrganStats {
+  const organSnps = snps.filter((s) => s.organ === organ);
+  return {
+    system: organSnps[0]?.system ?? "Unknown",
+    organ,
+    proteinCount: new Set(organSnps.map((s) => s.protein)).size,
+    snpCount: organSnps.length,
+    naturalCount: organSnps.filter((s) => s.type === "natural").length,
+    mutationCount: organSnps.filter((s) => s.type === "mutation").length,
+  };
+}
 
-        // Color scale for mutation ratio
-        const color = d3.scaleSequential(d3.interpolateRdYlGn).domain([1, 0]);
+export default function BodyMap() {
+  const [selectedSnp, setSelectedSnp] = useState<SNP | null>(null);
+  const [selectedOrgan, setSelectedOrgan] = useState<string | null>(null);
 
-        // Formatting utilities.
-        const format = d3.format(",d");
-        const name = d => d.ancestors().reverse().map(d => d.data.name).join("/");
+  const handleSnpClick = (snp: SNP) => {
+    setSelectedSnp(snp);
+    setSelectedOrgan(snp.organ);
+  };
 
-        // Create a simple UID generator since DOM.uid isn't available
-        function uid(prefix) {
-            const id = `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
-            return {
-                id: id,
-                href: `#${id}`
-            };
-        }
+  const organStats = selectedOrgan ? getOrganStats(selectedOrgan) : null;
 
-        // Create the SVG container.
-        const svg = d3.select("#chart").append("svg")
-            .attr("viewBox", [0.5, -30.5, width, height + 30])
-            .attr("width", width)
-            .attr("height", height + 30)
-            .attr("style", "max-width: 100%; height: auto;")
-            .style("font", "10px sans-serif");
+  return (
+    <div className="flex gap-6">
+      {/* Left: Human body with clickable SNPs */}
+      <div className="relative w-1/2">
+        <svg
+          viewBox="0 0 200 400"
+          className="w-full h-full border rounded-2xl shadow-md"
+        >
+          {/* Heart Area */}
+          <motion.circle
+            cx="100"
+            cy="150"
+            r="30"
+            fill="#ff4d6d"
+            className="cursor-pointer"
+            whileHover={{ scale: 1.1 }}
+            onClick={() => handleSnpClick(snps[0])} // Example: clicking heart picks first SNP
+          />
+          {/* Example SNP markers inside heart */}
+          {snps
+            .filter((s) => s.organ === "Heart")
+            .map((snp, idx) => (
+              <motion.circle
+                key={snp.id}
+                cx={100 + idx * 8 - 8}
+                cy={150 + (idx % 2 === 0 ? -10 : 10)}
+                r="5"
+                fill={snp.type === "mutation" ? "#000" : "#fff"}
+                stroke="#333"
+                className="cursor-pointer"
+                whileHover={{ scale: 1.3 }}
+                onClick={() => handleSnpClick(snp)}
+              />
+            ))}
+        </svg>
+      </div>
 
-        // Display the root.
-        let group = svg.append("g")
-            .call(render, root);
+      {/* Right: Info panel */}
+      <Card className="w-1/2">
+        <CardContent className="space-y-4">
+          <h2 className="text-xl font-bold">Details</h2>
+          {selectedSnp ? (
+            <>
+              <div>
+                <h3 className="font-semibold">Selected SNP</h3>
+                <p><strong>Protein:</strong> {selectedSnp.protein}</p>
+                <p><strong>System:</strong> {selectedSnp.system}</p>
+                <p><strong>Organ:</strong> {selectedSnp.organ}</p>
+                <p><strong>Location:</strong> {selectedSnp.location}</p>
+                <p><strong>Type:</strong> {selectedSnp.type}</p>
+              </div>
+            </>
+          ) : (
+            <p className="text-gray-500">Click on a SNP to see details</p>
+          )}
 
-        function render(group, root) {
-            const node = group
-                .selectAll("g")
-                .data(root.children.concat(root))
-                .join("g");
-
-            node.filter(d => d === root ? d.parent : d.children)
-                .attr("cursor", "pointer")
-                .on("click", (event, d) => d === root ? zoomout(root) : zoomin(d));
-
-            node.append("title")
-                .text(d => {
-                    if (d.data.natural_snps && d.data.mutated_snps) {
-                        return `${name(d)}\nNatural SNPs: ${format(d.data.natural_snps)}\nMutated SNPs: ${format(d.data.mutated_snps)}\nMutation Rate: ${((d.data.mutated_snps / (d.data.natural_snps + d.data.mutated_snps)) * 100).toFixed(1)}%`;
-                    } else {
-                        return `${name(d)}\n${format(d.value)}`;
-                    }
-                });
-
-            node.append("rect")
-                .attr("id", d => (d.leafUid = uid("leaf")).id)
-                .attr("fill", d => {
-                    if (d === root) return "#fff";
-                    if (d.children) return "#ccc";
-                    if (d.data.natural_snps && d.data.mutated_snps) {
-                        const ratio = d.data.mutated_snps / (d.data.natural_snps + d.data.mutated_snps);
-                        return color(ratio);
-                    }
-                    return "#ddd";
-                })
-                .attr("fill-opacity", d => d === root || d.children ? 1 : 0.8)
-                .attr("stroke", "#fff");
-
-            node.append("clipPath")
-                .attr("id", d => (d.clipUid = uid("clip")).id)
-                .append("use")
-                .attr("xlink:href", d => d.leafUid.href);
-
-            node.append("text")
-                .attr("clip-path", d => d.clipUid.href)
-                .attr("font-weight", d => d === root ? "bold" : null)
-                .selectAll("tspan")
-                .data(d => {
-                    let nameText = d === root ? name(d) : d.data.name;
-                    let lines = nameText.split(/(?=[A-Z][^A-Z])/g);
-                    
-                    if (d.data.mutated_snps !== undefined) {
-                        lines.push(`Mutations: ${format(d.data.mutated_snps)}`);
-                    } else if (!d.children || d === root) {
-                        lines.push(format(d.value));
-                    }
-                    
-                    return lines;
-                })
-                .join("tspan")
-                .attr("x", 3)
-                .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`)
-                .attr("fill-opacity", (d, i, nodes) => i === nodes.length - 1 ? 0.7 : null)
-                .attr("font-weight", (d, i, nodes) => i === nodes.length - 1 ? "normal" : null)
-                .text(d => d);
-
-            group.call(position, root);
-        }
-
-        function position(group, root) {
-            group.selectAll("g")
-                .attr("transform", d => d === root ? `translate(0,-30)` : `translate(${x(d.x0)},${y(d.y0)})`)
-                .select("rect")
-                .attr("width", d => d === root ? width : x(d.x1) - x(d.x0))
-                .attr("height", d => d === root ? 30 : y(d.y1) - y(d.y0));
-        }
-
-        // When zooming in, draw the new nodes on top, and fade them in.
-        function zoomin(d) {
-            const group0 = group.attr("pointer-events", "none");
-            const group1 = group = svg.append("g").call(render, d);
-
-            x.domain([d.x0, d.x1]);
-            y.domain([d.y0, d.y1]);
-
-            svg.transition()
-                .duration(750)
-                .call(t => group0.transition(t).remove()
-                    .call(position, d.parent))
-                .call(t => group1.transition(t)
-                    .attrTween("opacity", () => d3.interpolate(0, 1))
-                    .call(position, d));
-        }
-
-        // When zooming out, draw the old nodes on top, and fade them out.
-        function zoomout(d) {
-            const group0 = group.attr("pointer-events", "none");
-            const group1 = group = svg.insert("g", "*").call(render, d.parent);
-
-            x.domain([d.parent.x0, d.parent.x1]);
-            y.domain([d.parent.y0, d.parent.y1]);
-
-            svg.transition()
-                .duration(750)
-                .call(t => group0.transition(t).remove()
-                    .attrTween("opacity", () => d3.interpolate(1, 0))
-                    .call(position, d))
-                .call(t => group1.transition(t)
-                    .call(position, d.parent));
-        }
-    </script>
-</body>
-</html>
+          {organStats && (
+            <div>
+              <h3 className="font-semibold mt-4">Organ Stats</h3>
+              <p><strong>System:</strong> {organStats.system}</p>
+              <p><strong>Organ:</strong> {organStats.organ}</p>
+              <p><strong>ECM Proteins Count:</strong> {organStats.proteinCount}</p>
+              <p><strong>Total SNPs:</strong> {organStats.snpCount}</p>
+              <p><strong>Natural SNPs:</strong> {organStats.naturalCount}</p>
+              <p><strong>Mutations:</strong> {organStats.mutationCount}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+                  
