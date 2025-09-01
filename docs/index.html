@@ -1,129 +1,97 @@
-import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { motion } from "framer-motion";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ECM SNP Explorer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 30px;
+      padding: 30px;
+    }
+    svg {
+      width: 250px;
+      cursor: pointer;
+    }
+    .info-panel {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      width: 300px;
+    }
+    .info-panel h2 {
+      margin-top: 0;
+    }
+    .highlight {
+      fill: red;
+      opacity: 0.6;
+      transition: opacity 0.3s;
+    }
+    .highlight:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
 
-type SNP = {
-  id: string;
-  protein: string;
-  system: string;
-  organ: string;
-  location: string;
-  type: "natural" | "mutation";
-};
+  <!-- Body Diagram with clickable heart -->
+  <svg viewBox="0 0 200 400">
+    <rect x="80" y="50" width="40" height="300" fill="#ccc" stroke="#333"/>
+    <!-- Heart region -->
+    <circle id="heart" cx="100" cy="150" r="20" class="highlight"/>
+  </svg>
 
-type OrganStats = {
-  system: string;
-  organ: string;
-  proteinCount: number;
-  snpCount: number;
-  naturalCount: number;
-  mutationCount: number;
-};
+  <!-- Info panel -->
+  <div class="info-panel" id="infoPanel">
+    <h2>Click on the heart</h2>
+    <p>Details will appear here.</p>
+  </div>
 
-const snps: SNP[] = [
-  { id: "snp1", protein: "Collagen I", system: "Circulatory", organ: "Heart", location: "Chromosome 7", type: "mutation" },
-  { id: "snp2", protein: "Elastin", system: "Circulatory", organ: "Heart", location: "Chromosome 2", type: "natural" },
-  { id: "snp3", protein: "Fibronectin", system: "Circulatory", organ: "Heart", location: "Chromosome 5", type: "mutation" },
-  // ...add more SNPs
-];
+  <script>
+    // Example dataset
+    const snpData = {
+      heart: {
+        protein: "Collagen IV",
+        system: "Circulatory",
+        location: "Left ventricle ECM",
+        type: "Missense Mutation",
+        stats: {
+          system: "Circulatory",
+          organ: "Heart",
+          proteinsCount: 128,
+          snpsCount: 452,
+          natural: 320,
+          mutations: 132
+        }
+      }
+    };
 
-function getOrganStats(organ: string): OrganStats {
-  const organSnps = snps.filter((s) => s.organ === organ);
-  return {
-    system: organSnps[0]?.system ?? "Unknown",
-    organ,
-    proteinCount: new Set(organSnps.map((s) => s.protein)).size,
-    snpCount: organSnps.length,
-    naturalCount: organSnps.filter((s) => s.type === "natural").length,
-    mutationCount: organSnps.filter((s) => s.type === "mutation").length,
-  };
-}
+    const heart = document.getElementById("heart");
+    const infoPanel = document.getElementById("infoPanel");
 
-export default function BodyMap() {
-  const [selectedSnp, setSelectedSnp] = useState<SNP | null>(null);
-  const [selectedOrgan, setSelectedOrgan] = useState<string | null>(null);
-
-  const handleSnpClick = (snp: SNP) => {
-    setSelectedSnp(snp);
-    setSelectedOrgan(snp.organ);
-  };
-
-  const handleOrganClick = (organ: string) => {
-    setSelectedOrgan(organ);
-    setSelectedSnp(null); // clear SNP selection
-  };
-
-  const organStats = selectedOrgan ? getOrganStats(selectedOrgan) : null;
-
-  return (
-    <div className="flex gap-6">
-      {/* Left: Human body with clickable SNPs */}
-      <div className="relative w-1/2">
-        <svg
-          viewBox="0 0 200 400"
-          className="w-full h-full border rounded-2xl shadow-md"
-        >
-          {/* Heart Area (click for stats) */}
-          <motion.circle
-            cx="100"
-            cy="150"
-            r="30"
-            fill="#ff4d6d"
-            className="cursor-pointer"
-            whileHover={{ scale: 1.1 }}
-            onClick={() => handleOrganClick("Heart")}
-          />
-
-          {/* Example SNP markers inside heart */}
-          {snps
-            .filter((s) => s.organ === "Heart")
-            .map((snp, idx) => (
-              <motion.circle
-                key={snp.id}
-                cx={100 + idx * 12 - 12}
-                cy={150 + (idx % 2 === 0 ? -10 : 10)}
-                r="6"
-                fill={snp.type === "mutation" ? "#000" : "#fff"}
-                stroke="#333"
-                className="cursor-pointer"
-                whileHover={{ scale: 1.3 }}
-                onClick={() => handleSnpClick(snp)}
-              />
-            ))}
-        </svg>
-      </div>
-
-      {/* Right: Info panel */}
-      <Card className="w-1/2">
-        <CardContent className="space-y-4">
-          <h2 className="text-xl font-bold">Details</h2>
-
-          {selectedSnp ? (
-            <div>
-              <h3 className="font-semibold">Selected SNP</h3>
-              <p><strong>Protein:</strong> {selectedSnp.protein}</p>
-              <p><strong>System:</strong> {selectedSnp.system}</p>
-              <p><strong>Organ:</strong> {selectedSnp.organ}</p>
-              <p><strong>Location:</strong> {selectedSnp.location}</p>
-              <p><strong>Type:</strong> {selectedSnp.type}</p>
-            </div>
-          ) : (
-            <p className="text-gray-500">Click a SNP or organ to see details</p>
-          )}
-
-          {organStats && (
-            <div>
-              <h3 className="font-semibold mt-4">Organ Stats</h3>
-              <p><strong>System:</strong> {organStats.system}</p>
-              <p><strong>Organ:</strong> {organStats.organ}</p>
-              <p><strong>ECM Proteins Count:</strong> {organStats.proteinCount}</p>
-              <p><strong>Total SNPs:</strong> {organStats.snpCount}</p>
-              <p><strong>Natural SNPs:</strong> {organStats.naturalCount}</p>
-              <p><strong>Mutations:</strong> {organStats.mutationCount}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+    heart.addEventListener("click", () => {
+      const data = snpData.heart;
+      infoPanel.innerHTML = `
+        <h2>Heart SNP Info</h2>
+        <p><strong>Protein:</strong> ${data.protein}</p>
+        <p><strong>System:</strong> ${data.system}</p>
+        <p><strong>Location:</strong> ${data.location}</p>
+        <p><strong>Type:</strong> ${data.type}</p>
+        <hr>
+        <h3>System Stats</h3>
+        <p><strong>System:</strong> ${data.stats.system}</p>
+        <p><strong>Organ:</strong> ${data.stats.organ}</p>
+        <p><strong>ECM Proteins:</strong> ${data.stats.proteinsCount}</p>
+        <p><strong>Total SNPs:</strong> ${data.stats.snpsCount}</p>
+        <p><strong>Natural SNPs:</strong> ${data.stats.natural}</p>
+        <p><strong>Mutations:</strong> ${data.stats.mutations}</p>
+      `;
+    });
+  </script>
+</body>
+</html>
