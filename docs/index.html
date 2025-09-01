@@ -1,921 +1,125 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Human Body ECM Treemap Visualizer</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-            color: white;
-            overflow: hidden;
-        }
-        
-        .container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-        }
-        
-        .header {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 100;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 15px;
-            border: 1px solid rgba(78, 205, 196, 0.3);
-        }
-        
-        .header h1 {
-            margin: 0 0 10px 0;
-            font-size: 1.8em;
-            background: linear-gradient(45deg, #4ecdc4, #ff6b6b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .controls {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 100;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 15px;
-            border: 1px solid rgba(78, 205, 196, 0.3);
-            width: 300px;
-        }
-        
-        .control-group {
-            margin-bottom: 15px;
-        }
-        
-        .control-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            font-size: 0.9em;
-            color: #4ecdc4;
-        }
-        
-        select, input[type="range"], button {
-            width: 100%;
-            padding: 8px;
-            border: none;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            font-size: 14px;
-        }
-        
-        button {
-            background: linear-gradient(45deg, #4ecdc4, #44a08d);
-            cursor: pointer;
-            transition: all 0.3s;
-            margin: 5px 0;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.3);
-        }
-        
-        .info-panel {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            z-index: 100;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 15px;
-            border: 1px solid rgba(78, 205, 196, 0.3);
-            max-width: 400px;
-        }
-        
-        .snp-details {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            z-index: 100;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 15px;
-            border: 1px solid rgba(78, 205, 196, 0.3);
-            max-width: 350px;
-        }
-        
-        .breadcrumb {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 90;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 20px;
-            border-radius: 25px;
-            font-size: 0.9em;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        
-        .breadcrumb.visible {
-            opacity: 1;
-        }
-        
-        .treemap-cell {
-            stroke: #fff;
-            stroke-width: 1;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .treemap-cell:hover {
-            stroke-width: 3;
-            stroke: #4ecdc4;
-            filter: brightness(1.2);
-        }
-        
-        .cell-label {
-            font-weight: bold;
-            text-anchor: middle;
-            dominant-baseline: middle;
-            pointer-events: none;
-            fill: white;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-        }
-        
-        .snp-dot {
-            r: 2;
-            cursor: pointer;
-            transition: r 0.3s;
-        }
-        
-        .snp-dot:hover {
-            r: 4;
-        }
-        
-        .natural-snp {
-            fill: #00ff88;
-            opacity: 0.8;
-        }
-        
-        .mutation-snp {
-            fill: #ff4444;
-            opacity: 0.9;
-        }
-        
-        .navigation {
-            position: absolute;
-            top: 120px;
-            left: 20px;
-            z-index: 100;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid rgba(78, 205, 196, 0.3);
-        }
-        
-        .nav-button {
-            display: block;
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            background: rgba(78, 205, 196, 0.2);
-            border: 1px solid #4ecdc4;
-            border-radius: 5px;
-            color: white;
-            text-decoration: none;
-            text-align: center;
-            transition: all 0.3s;
-        }
-        
-        .nav-button:hover {
-            background: rgba(78, 205, 196, 0.4);
-            transform: translateX(5px);
-        }
-        
-        .zoom-level {
-            position: absolute;
-            top: 50%;
-            right: 20px;
-            transform: translateY(-50%);
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px;
-            border-radius: 10px;
-            text-align: center;
-            font-size: 0.8em;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🫀 Human Body ECM Explorer</h1>
-            <p>Zoomable treemap visualization of extracellular matrix proteins and SNPs across human anatomy</p>
-        </div>
-        
-        <div class="controls">
-            <div class="control-group">
-                <label>🧬 ECM Protein Focus</label>
-                <select id="proteinFilter">
-                    <option value="all">All ECM Proteins</option>
-                    <option value="collagen">Collagen Family</option>
-                    <option value="laminin">Laminin</option>
-                    <option value="fibronectin">Fibronectin</option>
-                    <option value="proteoglycans">Proteoglycans</option>
-                    <option value="elastin">Elastin</option>
-                </select>
-            </div>
-            
-            <div class="control-group">
-                <label>🎯 SNP Type Filter</label>
-                <select id="snpTypeFilter">
-                    <option value="all">All SNPs</option>
-                    <option value="natural">Natural Variants</option>
-                    <option value="mutations">Mutations</option>
-                    <option value="pathogenic">Pathogenic</option>
-                </select>
-            </div>
-            
-            <div class="control-group">
-                <label>📊 SNP Density: <span id="densityDisplay">Medium</span></label>
-                <input type="range" id="snpDensity" min="50" max="500" value="200" />
-            </div>
-            
-            <div class="control-group">
-                <label>🔍 Detail Level: <span id="detailDisplay">Standard</span></label>
-                <input type="range" id="detailLevel" min="1" max="5" value="3" />
-            </div>
-            
-            <button onclick="regenerateData()">🔄 Regenerate SNPs</button>
-            <button onclick="exportView()">📸 Export Current View</button>
-            <button onclick="showAllSystems()">🏠 Show All Systems</button>
-        </div>
-        
-        <div class="navigation">
-            <h4 style="margin: 0 0 10px 0; color: #4ecdc4;">Quick Navigation</h4>
-            <div class="nav-button" onclick="zoomToSystem('nervous')">🧠 Nervous System</div>
-            <div class="nav-button" onclick="zoomToSystem('cardiovascular')">❤️ Cardiovascular</div>
-            <div class="nav-button" onclick="zoomToSystem('musculoskeletal')">💪 Musculoskeletal</div>
-            <div class="nav-button" onclick="zoomToSystem('respiratory')">🫁 Respiratory</div>
-            <div class="nav-button" onclick="zoomToSystem('digestive')">🫄 Digestive</div>
-        </div>
-        
-        <div class="breadcrumb" id="breadcrumb">
-            Human Body
-        </div>
-        
-        <div class="zoom-level">
-            <div>Zoom Level</div>
-            <div style="font-size: 1.2em; color: #4ecdc4;" id="currentZoom">1x</div>
-            <div style="font-size: 0.7em; margin-top: 5px;">
-                <div>Click: Zoom In</div>
-                <div>Right Click: Zoom Out</div>
-            </div>
-        </div>
-        
-        <div class="info-panel">
-            <h3 style="color: #4ecdc4; margin: 0 0 15px 0;">📍 Current View</h3>
-            <div id="viewInfo">
-                <p><strong>System:</strong> <span id="currentSystem">Whole Body</span></p>
-                <p><strong>Organ:</strong> <span id="currentOrgan">All Organs</span></p>
-                <p><strong>ECM Proteins:</strong> <span id="proteinCount">0</span></p>
-                <p><strong>Total SNPs:</strong> <span id="totalSNPs">0</span></p>
-                <p><strong>Natural:</strong> <span id="naturalCount">0</span></p>
-                <p><strong>Mutations:</strong> <span id="mutationCount">0</span></p>
-            </div>
-        </div>
-        
-        <div class="snp-details">
-            <h3 style="color: #4ecdc4; margin: 0 0 15px 0;">🔬 SNP Information</h3>
-            <div id="snpDetails">
-                <p>Hover over SNP dots for detailed genetic information</p>
-            </div>
-        </div>
-        
-        <svg id="treemap" width="100%" height="100vh"></svg>
-    </div>
+chart = {
+  // Specify the chart’s dimensions.
+  const width = 928;
+  const height = 924;
 
-    <script>
-        // Global variables
-        let currentData = null;
-        let currentRoot = null;
-        let svg, group, x, y;
-        let snpData = [];
-        let zoomLevel = 1;
-        let currentPath = ['Human Body'];
-        let baseRoot = null; // top-level root for "home"
+  // This custom tiling function adapts the built-in binary tiling function
+  // for the appropriate aspect ratio when the treemap is zoomed-in.
+  function tile(node, x0, y0, x1, y1) {
+    d3.treemapBinary(node, 0, 0, width, height);
+    for (const child of node.children) {
+      child.x0 = x0 + child.x0 / width * (x1 - x0);
+      child.x1 = x0 + child.x1 / width * (x1 - x0);
+      child.y0 = y0 + child.y0 / height * (y1 - y0);
+      child.y1 = y0 + child.y1 / height * (y1 - y0);
+    }
+  }
 
-        // Human body hierarchical data structure
-        const humanBodyData = {
-            name: "Human Body",
-            children: [
-                {
-                    name: "Nervous System",
-                    value: 25,
-                    color: "#ff6b9d",
-                    children: [
-                        {
-                            name: "Brain",
-                            value: 15,
-                            color: "#ff8fab",
-                            children: [
-                                { name: "Cerebral Cortex", value: 6, color: "#ffadc6", ecmDensity: 0.8 },
-                                { name: "Hippocampus", value: 2, color: "#ffc2d4", ecmDensity: 0.9 },
-                                { name: "Cerebellum", value: 4, color: "#ffd7e3", ecmDensity: 0.7 },
-                                { name: "Brainstem", value: 2, color: "#ffecf1", ecmDensity: 0.6 },
-                                { name: "Thalamus", value: 1, color: "#fff5f8", ecmDensity: 0.75 }
-                            ]
-                        },
-                        {
-                            name: "Spinal Cord",
-                            value: 5,
-                            color: "#ff9fb3",
-                            children: [
-                                { name: "Cervical", value: 2, color: "#ffb3c6", ecmDensity: 0.7 },
-                                { name: "Thoracic", value: 2, color: "#ffc7d9", ecmDensity: 0.65 },
-                                { name: "Lumbar", value: 1, color: "#ffdbec", ecmDensity: 0.6 }
-                            ]
-                        },
-                        {
-                            name: "Peripheral Nerves",
-                            value: 5,
-                            color: "#ffb3c6",
-                            ecmDensity: 0.5
-                        }
-                    ]
-                },
-                {
-                    name: "Cardiovascular System",
-                    value: 20,
-                    color: "#e74c3c",
-                    children: [
-                        {
-                            name: "Heart",
-                            value: 8,
-                            color: "#ec7063",
-                            children: [
-                                { name: "Myocardium", value: 4, color: "#f1948a", ecmDensity: 0.8 },
-                                { name: "Endocardium", value: 2, color: "#f5b7b1", ecmDensity: 0.9 },
-                                { name: "Pericardium", value: 2, color: "#fadbd8", ecmDensity: 0.7 }
-                            ]
-                        },
-                        {
-                            name: "Blood Vessels",
-                            value: 12,
-                            color: "#e95e6f",
-                            children: [
-                                { name: "Arteries", value: 6, color: "#ed7d95", ecmDensity: 0.85 },
-                                { name: "Veins", value: 4, color: "#f19cbb", ecmDensity: 0.75 },
-                                { name: "Capillaries", value: 2, color: "#f5bbe1", ecmDensity: 0.95 }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    name: "Musculoskeletal System",
-                    value: 30,
-                    color: "#3498db",
-                    children: [
-                        {
-                            name: "Bones",
-                            value: 15,
-                            color: "#5dade2",
-                            children: [
-                                { name: "Compact Bone", value: 8, color: "#85c1e9", ecmDensity: 0.9 },
-                                { name: "Spongy Bone", value: 4, color: "#aed6f1", ecmDensity: 0.85 },
-                                { name: "Bone Marrow", value: 3, color: "#d6eaf8", ecmDensity: 0.6 }
-                            ]
-                        },
-                        {
-                            name: "Muscles",
-                            value: 10,
-                            color: "#7fb3d3",
-                            children: [
-                                { name: "Skeletal Muscle", value: 6, color: "#a9cce3", ecmDensity: 0.7 },
-                                { name: "Cardiac Muscle", value: 2, color: "#d4e6f1", ecmDensity: 0.8 },
-                                { name: "Smooth Muscle", value: 2, color: "#eaf2f8", ecmDensity: 0.65 }
-                            ]
-                        },
-                        {
-                            name: "Connective Tissue",
-                            value: 5,
-                            color: "#a3c4e0",
-                            children: [
-                                { name: "Tendons", value: 2, color: "#c7d9ec", ecmDensity: 0.95 },
-                                { name: "Ligaments", value: 2, color: "#e4eff8", ecmDensity: 0.9 },
-                                { name: "Cartilage", value: 1, color: "#f2f7fc", ecmDensity: 0.85 }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    name: "Respiratory System",
-                    value: 15,
-                    color: "#2ecc71",
-                    children: [
-                        {
-                            name: "Lungs",
-                            value: 12,
-                            color: "#58d68d",
-                            children: [
-                                { name: "Alveoli", value: 6, color: "#82e0aa", ecmDensity: 0.85 },
-                                { name: "Bronchi", value: 4, color: "#a9dfbf", ecmDensity: 0.7 },
-                                { name: "Bronchioles", value: 2, color: "#d5f4e6", ecmDensity: 0.75 }
-                            ]
-                        },
-                        {
-                            name: "Airways",
-                            value: 3,
-                            color: "#7dcea0",
-                            ecmDensity: 0.6
-                        }
-                    ]
-                },
-                {
-                    name: "Digestive System",
-                    value: 10,
-                    color: "#f39c12",
-                    children: [
-                        {
-                            name: "Stomach",
-                            value: 3,
-                            color: "#f7b731",
-                            ecmDensity: 0.7
-                        },
-                        {
-                            name: "Intestines",
-                            value: 5,
-                            color: "#ffd32a",
-                            children: [
-                                { name: "Small Intestine", value: 3, color: "#ffdd59", ecmDensity: 0.8 },
-                                { name: "Large Intestine", value: 2, color: "#ffe88a", ecmDensity: 0.75 }
-                            ]
-                        },
-                        {
-                            name: "Liver",
-                            value: 2,
-                            color: "#f8c471",
-                            ecmDensity: 0.85
-                        }
-                    ]
-                }
-            ]
-        };
-        
-        // ECM protein data with SNP information
-        const ecmProteins = {
-            'COL1A1': { name: 'Collagen I Alpha 1', snpRate: 0.15, naturalRate: 0.85, family: 'collagen' },
-            'COL4A1': { name: 'Collagen IV Alpha 1', snpRate: 0.12, naturalRate: 0.88, family: 'collagen' },
-            'LAMA1': { name: 'Laminin Alpha 1', snpRate: 0.18, naturalRate: 0.75, family: 'laminin' },
-            'FN1': { name: 'Fibronectin 1', snpRate: 0.14, naturalRate: 0.80, family: 'fibronectin' },
-            'HSPG2': { name: 'Perlecan', snpRate: 0.10, naturalRate: 0.90, family: 'proteoglycans' },
-            'ELN': { name: 'Elastin', snpRate: 0.08, naturalRate: 0.92, family: 'elastin' },
-            'ACAN': { name: 'Aggrecan', snpRate: 0.16, naturalRate: 0.78, family: 'proteoglycans' },
-            'VTN': { name: 'Vitronectin', snpRate: 0.13, naturalRate: 0.82, family: 'proteoglycans' }
-        };
+  // Compute the layout.
+  const hierarchy = d3.hierarchy(data)
+    .sum(d => d.value)
+    .sort((a, b) => b.value - a.value);
+  const root = d3.treemap().tile(tile)(hierarchy);
 
-        // Initialize the visualizer
-        function init() {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            
-            x = d3.scaleLinear().rangeRound([0, width]);
-            y = d3.scaleLinear().rangeRound([0, height]);
-            
-            svg = d3.select("#treemap")
-                .attr("width", width)
-                .attr("height", height)
-                .style("font", "12px sans-serif")
-                .on("contextmenu", (e) => { e.preventDefault(); zoomOut(currentRoot); }); // right-click to zoom out
-            
-            function tile(node, x0, y0, x1, y1) {
-                d3.treemapBinary(node, 0, 0, width, height);
-                for (const child of node.children) {
-                    child.x0 = x0 + child.x0 / width * (x1 - x0);
-                    child.x1 = x0 + child.x1 / width * (x1 - x0);
-                    child.y0 = y0 + child.y0 / height * (y1 - y0);
-                    child.y1 = y0 + child.y1 / height * (y1 - y0);
-                }
-            }
-            
-            const hierarchy = d3.hierarchy(humanBodyData)
-                .sum(d => d.value)
-                .sort((a, b) => b.value - a.value);
-            
-            baseRoot = d3.treemap().tile(tile)(hierarchy);
-            currentRoot = baseRoot;
-            currentData = humanBodyData;
-            
-            group = svg.append("g").call(render, currentRoot);
-            
-            setupEventListeners();
-            generateSNPData();
-            updatePanels(currentRoot);
-        }
-        
-        function render(group, root) {
-            const node = group
-                .selectAll("g")
-                .data(root.children.concat(root))
-                .join("g");
-            
-            node.filter(d => d === root ? d.parent : d.children)
-                .attr("cursor", "pointer")
-                .on("click", (event, d) => {
-                    event.stopPropagation();
-                    d === root ? zoomOut(root) : zoomIn(d);
-                });
-            
-            node.append("title")
-                .text(d => `${getName(d)}\nECM Density: ${Math.round((d.data.ecmDensity || 0.5) * 100)}%\nSNPs: ${getSNPCountForNode(d)}`);
-            
-            node.append("rect")
-                .attr("class", "treemap-cell")
-                .attr("id", d => (d.leafUid = `leaf-${d.data.name.replace(/\s+/g, '-')}`))
-                .attr("fill", d => {
-                    if (d === root) return "#333";
-                    if (d.children) return d.data.color || "#666";
-                    const density = d.data.ecmDensity || 0.5;
-                    return d3.interpolateViridis(density);
-                })
-                .attr("stroke", "#fff")
-                .attr("stroke-width", d => d === root ? 3 : 1);
-            
-            node.append("clipPath")
-                .attr("id", d => (d.clipUid = `clip-${d.data.name.replace(/\s+/g, '-')}`))
-                .append("rect");
-            
-            node.append("text")
-                .attr("class", "cell-label")
-                .attr("clip-path", d => `url(#${d.clipUid})`)
-                .attr("font-weight", d => d === root ? "bold" : d.children ? "bold" : "normal")
-                .attr("font-size", d => {
-                    const area = (d.x1 - d.x0) * (d.y1 - d.y0);
-                    return `${Math.max(10, Math.min(24, Math.sqrt(area) * 0.05))}px`;
-                })
-                .selectAll("tspan")
-                .data(d => {
-                    const nm = d === root ? getName(d) : d.data.name;
-                    const lines = nm.split(/(?=[A-Z][^A-Z])/g);
-                    if (d.children || d === root) return lines;
-                    return [...lines, `${getSNPCountForNode(d)} SNPs`];
-                })
-                .join("tspan")
-                .attr("x", 0)
-                .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`)
-                .attr("fill-opacity", (d, i, nodes) => i === nodes.length - 1 ? 0.7 : 1)
-                .attr("font-weight", (d, i, nodes) => i === nodes.length - 1 ? "normal" : "bold")
-                .text(d => d);
-            
-            group.call(position, root);
-            
-            setTimeout(() => addSNPDots(group, root), 100);
-        }
-        
-        function position(group, root) {
-            group.selectAll("g")
-                .attr("transform", d => d === root ? `translate(0,0)` : `translate(${x(d.x0)},${y(d.y0)})`)
-                .select("rect")
-                .attr("width", d => d === root ? x.range()[1] : x(d.x1) - x(d.x0))
-                .attr("height", d => d === root ? y.range()[1] : y(d.y1) - y(d.y0));
-            
-            group.selectAll("clipPath rect")
-                .attr("width", d => d === root ? x.range()[1] : x(d.x1) - x(d.x0))
-                .attr("height", d => d === root ? y.range()[1] : y(d.y1) - y(d.y0));
-            
-            group.selectAll("text")
-                .attr("x", d => (d === root ? x.range()[1] : x(d.x1) - x(d.x0)) / 2)
-                .attr("y", d => (d === root ? y.range()[1] : y(d.y1) - y(d.y0)) / 2);
-        }
-        
-        function addSNPDots(group, root) {
-            svg.selectAll(".snp-dot").remove();
-            
-            const leafNodes = root.descendants().filter(d => !d.children);
-            const snpDensity = parseInt(document.getElementById('snpDensity').value);
-            
-            leafNodes.forEach(node => {
-                const nodeWidth = x(node.x1) - x(node.x0);
-                const nodeHeight = y(node.y1) - y(node.y0);
-                const area = nodeWidth * nodeHeight;
-                const ecmDensity = node.data.ecmDensity || 0.5;
-                const detail = parseInt(document.getElementById('detailLevel').value);
-                const detailFactor = 0.6 + detail * 0.2; // more detail → more dots
-                const numSNPs = Math.max(2, Math.floor((area / 10000) * snpDensity * ecmDensity * detailFactor));
-                
-                for (let i = 0; i < numSNPs; i++) {
-                    const snp = generateSNPForNode(node, i);
-                    if (!passesFilters(snp)) continue;
+  // Create the scales.
+  const x = d3.scaleLinear().rangeRound([0, width]);
+  const y = d3.scaleLinear().rangeRound([0, height]);
 
-                    const snpX = x(node.x0) + Math.random() * nodeWidth;
-                    const snpY = y(node.y0) + Math.random() * nodeHeight;
-                    
-                    svg.append("circle")
-                        .attr("class", `snp-dot ${snp.type}-snp`)
-                        .attr("cx", snpX)
-                        .attr("cy", snpY)
-                        .attr("r", snp.type === 'mutation' ? 3 : 2)
-                        .style("fill", snp.type === 'natural' ? "#00ff88" : "#ff4444")
-                        .style("opacity", snp.type === 'mutation' ? 0.9 : 0.7)
-                        .on("mouseover", function(event) {
-                            showSNPDetails(snp);
-                            d3.select(this).attr("r", snp.type === 'mutation' ? 5 : 4);
-                        })
-                        .on("mouseout", function() {
-                            d3.select(this).attr("r", snp.type === 'mutation' ? 3 : 2);
-                        })
-                        .on("click", function(event) {
-                            event.stopPropagation();
-                            selectSNP(snp);
-                        });
-                }
-            });
-            
-            updateSNPCounts();
-        }
-        
-        function generateSNPForNode(node, index) {
-            const proteinKeys = Object.keys(ecmProteins);
-            const proteinKey = proteinKeys[Math.floor(Math.random() * proteinKeys.length)];
-            const protein = ecmProteins[proteinKey];
-            
-            const isNatural = Math.random() < protein.naturalRate;
-            const consequence = isNatural
-                ? (Math.random() < 0.7 ? "synonymous" : "missense")
-                : (Math.random() < 0.6 ? "missense" : "nonsense");
+  // Formatting utilities.
+  const format = d3.format(",d");
+  const name = d => d.ancestors().reverse().map(d => d.data.name).join("/");
 
-            const maf = +(Math.random() * (isNatural ? 0.45 : 0.05)).toFixed(3); // minor allele frequency
-            const patho = !isNatural && Math.random() < 0.35; // simple “pathogenic” flag for demo
+  // Create the SVG container.
+  const svg = d3.create("svg")
+      .attr("viewBox", [0.5, -30.5, width, height + 30])
+      .attr("width", width)
+      .attr("height", height + 30)
+      .attr("style", "max-width: 100%; height: auto;")
+      .style("font", "10px sans-serif");
 
-            const families = {
-                collagen: /^COL/i,
-                laminin: /^LAMA/i,
-                fibronectin: /^FN/i,
-                proteoglycans: /^(HSPG2|ACAN|VTN)/i,
-                elastin: /^ELN/i
-            };
-            
-            const snp = {
-                id: `${node.data.name.replace(/\s+/g, '_')}_${proteinKey}_${index}`,
-                region: node.data.name,
-                protein: proteinKey,
-                proteinName: protein.name,
-                family: Object.keys(families).find(k => families[k].test(proteinKey)) || 'other',
-                type: isNatural ? 'natural' : 'mutation',
-                chromosome: Math.floor(Math.random() * 22) + 1,
-                position: Math.floor(Math.random() * 1e7),
-                consequence,
-                maf,
-                pathogenic: patho
-            };
+  // Display the root.
+  let group = svg.append("g")
+      .call(render, root);
 
-            snpData.push(snp);
-            return snp;
-        }
+  function render(group, root) {
+    const node = group
+      .selectAll("g")
+      .data(root.children.concat(root))
+      .join("g");
 
-        function generateSNPData() {
-            snpData = [];
-            // generate a light baseline cache so info panel counts work even before dots render
-            baseRoot.descendants().filter(d => !d.children).forEach((leaf, idx) => {
-                const n = 50 + Math.floor(leaf.value * 8);
-                for (let i=0;i<n;i++) generateSNPForNode(leaf, `${idx}_${i}`);
-            });
-        }
+    node.filter(d => d === root ? d.parent : d.children)
+        .attr("cursor", "pointer")
+        .on("click", (event, d) => d === root ? zoomout(root) : zoomin(d));
 
-        function passesFilters(snp) {
-            const proteinFilter = document.getElementById('proteinFilter').value;
-            const snpTypeFilter = document.getElementById('snpTypeFilter').value;
+    node.append("title")
+        .text(d => `${name(d)}\n${format(d.value)}`);
 
-            if (proteinFilter !== 'all' && snp.family !== proteinFilter) return false;
+    node.append("rect")
+        .attr("id", d => (d.leafUid = DOM.uid("leaf")).id)
+        .attr("fill", d => d === root ? "#fff" : d.children ? "#ccc" : "#ddd")
+        .attr("stroke", "#fff");
 
-            if (snpTypeFilter === 'natural' && snp.type !== 'natural') return false;
-            if (snpTypeFilter === 'mutations' && snp.type !== 'mutation') return false;
-            if (snpTypeFilter === 'pathogenic' && !snp.pathogenic) return false;
+    node.append("clipPath")
+        .attr("id", d => (d.clipUid = DOM.uid("clip")).id)
+      .append("use")
+        .attr("xlink:href", d => d.leafUid.href);
 
-            return true;
-        }
-        
-        function getSNPCountForNode(d) {
-            const region = d.data.name;
-            // count from cache with filters applied (approximate for performance)
-            return snpData.filter(s => s.region === region && passesFilters(s)).length;
-        }
-        
-        function getName(d) {
-            return d.ancestors().reverse().map(n => n.data.name).join(" / ");
-        }
+    node.append("text")
+        .attr("clip-path", d => d.clipUid)
+        .attr("font-weight", d => d === root ? "bold" : null)
+      .selectAll("tspan")
+      .data(d => (d === root ? name(d) : d.data.name).split(/(?=[A-Z][^A-Z])/g).concat(format(d.value)))
+      .join("tspan")
+        .attr("x", 3)
+        .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`)
+        .attr("fill-opacity", (d, i, nodes) => i === nodes.length - 1 ? 0.7 : null)
+        .attr("font-weight", (d, i, nodes) => i === nodes.length - 1 ? "normal" : null)
+        .text(d => d);
 
-        function updateBreadcrumb(d) {
-            currentPath = d.ancestors().reverse().map(n => n.data.name);
-            const el = document.getElementById('breadcrumb');
-            el.textContent = currentPath.join(' › ');
-            el.classList.add('visible');
-            setTimeout(() => el.classList.remove('visible'), 900);
-        }
+    group.call(position, root);
+  }
 
-        function updatePanels(root) {
-            const path = root.ancestors().reverse().map(n => n.data.name);
-            document.getElementById('currentSystem').textContent = path[1] || 'Whole Body';
-            document.getElementById('currentOrgan').textContent = path.slice(2).join(' / ') || 'All Organs';
+  function position(group, root) {
+    group.selectAll("g")
+        .attr("transform", d => d === root ? `translate(0,-30)` : `translate(${x(d.x0)},${y(d.y0)})`)
+      .select("rect")
+        .attr("width", d => d === root ? width : x(d.x1) - x(d.x0))
+        .attr("height", d => d === root ? 30 : y(d.y1) - y(d.y0));
+  }
 
-            const leaves = root.descendants().filter(d => !d.children);
-            const total = leaves.reduce((acc, d) => acc + getSNPCountForNode(d), 0);
-            const naturals = leaves.reduce((acc, d) =>
-                acc + snpData.filter(s => s.region === d.data.name && s.type === 'natural' && passesFilters(s)).length, 0);
-            const mutations = leaves.reduce((acc, d) =>
-                acc + snpData.filter(s => s.region === d.data.name && s.type === 'mutation' && passesFilters(s)).length, 0);
+  // When zooming in, draw the new nodes on top, and fade them in.
+  function zoomin(d) {
+    const group0 = group.attr("pointer-events", "none");
+    const group1 = group = svg.append("g").call(render, d);
 
-            document.getElementById('proteinCount').textContent = Object.keys(ecmProteins).length;
-            document.getElementById('totalSNPs').textContent = total;
-            document.getElementById('naturalCount').textContent = naturals;
-            document.getElementById('mutationCount').textContent = mutations;
-        }
+    x.domain([d.x0, d.x1]);
+    y.domain([d.y0, d.y1]);
 
-        function updateZoomIndicator(level) {
-            document.getElementById('currentZoom').textContent = `${level.toFixed(1)}x`;
-        }
-        
-        // Zoom mechanics (adapted to your structure)
-        function zoomIn(d) {
-            const group0 = group.attr("pointer-events", "none");
-            const group1 = (group = svg.append("g").call(render, d));
+    svg.transition()
+        .duration(750)
+        .call(t => group0.transition(t).remove()
+          .call(position, d.parent))
+        .call(t => group1.transition(t)
+          .attrTween("opacity", () => d3.interpolate(0, 1))
+          .call(position, d));
+  }
 
-            x.domain([d.x0, d.x1]);
-            y.domain([d.y0, d.y1]);
+  // When zooming out, draw the old nodes on top, and fade them out.
+  function zoomout(d) {
+    const group0 = group.attr("pointer-events", "none");
+    const group1 = group = svg.insert("g", "*").call(render, d.parent);
 
-            svg.transition()
-                .duration(750)
-                .call(t => group0.transition(t).remove().call(position, d.parent || d))
-                .call(t => group1.transition(t)
-                    .attrTween("opacity", () => d3.interpolate(0, 1))
-                    .call(position, d));
+    x.domain([d.parent.x0, d.parent.x1]);
+    y.domain([d.parent.y0, d.parent.y1]);
 
-            currentRoot = d;
-            zoomLevel = zoomLevel * 1.4;
-            updateZoomIndicator(zoomLevel);
-            updateBreadcrumb(d);
-            updatePanels(d);
-        }
+    svg.transition()
+        .duration(750)
+        .call(t => group0.transition(t).remove()
+          .attrTween("opacity", () => d3.interpolate(1, 0))
+          .call(position, d))
+        .call(t => group1.transition(t)
+          .call(position, d.parent));
+  }
 
-        function zoomOut(d) {
-            if (!d.parent) { // already at top
-                currentRoot = baseRoot;
-                zoomLevel = 1;
-                updateZoomIndicator(zoomLevel);
-                updatePanels(baseRoot);
-                return;
-            }
-            const group0 = group.attr("pointer-events", "none");
-            const group1 = (group = svg.insert("g", "*").call(render, d.parent));
-
-            x.domain([d.parent.x0, d.parent.x1]);
-            y.domain([d.parent.y0, d.parent.y1]);
-
-            svg.transition()
-                .duration(750)
-                .call(t => group0.transition(t).remove()
-                    .attrTween("opacity", () => d3.interpolate(1, 0))
-                    .call(position, d))
-                .call(t => group1.transition(t)
-                    .call(position, d.parent));
-
-            currentRoot = d.parent;
-            zoomLevel = Math.max(1, zoomLevel / 1.4);
-            updateZoomIndicator(zoomLevel);
-            updateBreadcrumb(d.parent);
-            updatePanels(d.parent);
-        }
-
-        // SNP side panel helpers
-        function showSNPDetails(snp) {
-            const el = document.getElementById('snpDetails');
-            el.innerHTML = `
-                <p><strong>Region:</strong> ${snp.region}</p>
-                <p><strong>Protein:</strong> ${snp.protein} — ${snp.proteinName}</p>
-                <p><strong>Family:</strong> ${snp.family}</p>
-                <p><strong>Type:</strong> ${snp.type}${snp.pathogenic ? ' (pathogenic)' : ''}</p>
-                <p><strong>Chr:</strong> ${snp.chromosome} @ ${snp.position.toLocaleString()}</p>
-                <p><strong>Consequence:</strong> ${snp.consequence}</p>
-                <p><strong>MAF:</strong> ${snp.maf}</p>
-                <p style="opacity:.7">ID: ${snp.id}</p>
-            `;
-        }
-
-                function generateSNPForNode(node, index) {
-            // Randomly assign an ECM protein from the dictionary
-            const proteinKeys = Object.keys(ecmProteins);
-            const chosenProtein = proteinKeys[Math.floor(Math.random() * proteinKeys.length)];
-            const protein = ecmProteins[chosenProtein];
-
-            // Decide SNP type based on rates
-            const isNatural = Math.random() < protein.naturalRate;
-            const type = isNatural ? "natural" : "mutation";
-
-            return {
-                id: `${node.data.name}-${index}`,
-                node: node.data.name,
-                system: currentPath[currentPath.length - 1],
-                protein: protein.name,
-                proteinFamily: protein.family,
-                type: type,
-                description: `${protein.name} ${type === "natural" ? "variant" : "mutation"} in ${node.data.name}`,
-                pathogenic: !isNatural && Math.random() < 0.3 // 30% of mutations flagged pathogenic
-            };
-        }
-
-        function passesFilters(snp) {
-            const proteinFilter = document.getElementById("proteinFilter").value;
-            const snpTypeFilter = document.getElementById("snpTypeFilter").value;
-
-            if (proteinFilter !== "all" && snp.proteinFamily !== proteinFilter) return false;
-            if (snpTypeFilter === "natural" && snp.type !== "natural") return false;
-            if (snpTypeFilter === "mutations" && snp.type !== "mutation") return false;
-            if (snpTypeFilter === "pathogenic" && !snp.pathogenic) return false;
-
-            return true;
-        }
-
-        function showSNPDetails(snp) {
-            const detailsPanel = document.getElementById("snpDetails");
-            detailsPanel.innerHTML = `
-                <p><strong>Protein:</strong> ${snp.protein} (${snp.proteinFamily})</p>
-                <p><strong>System:</strong> ${snp.system}</p>
-                <p><strong>Location:</strong> ${snp.node}</p>
-                <p><strong>Type:</strong> ${snp.type === "natural" ? "Natural Variant" : "Mutation"}</p>
-                ${snp.pathogenic ? `<p style="color:#ff6b6b;"><strong>⚠️ Pathogenic Mutation</strong></p>` : ""}
-                <p><em>${snp.description}</em></p>
-            `;
-        }
-
-        function selectSNP(snp) {
-            alert(`Selected SNP:\n${snp.protein} (${snp.type}) in ${snp.node}`);
-        }
-
-        function updateSNPCounts() {
-            const allDots = Array.from(document.querySelectorAll(".snp-dot"));
-            const natural = allDots.filter(dot => dot.classList.contains("natural-snp")).length;
-            const mutations = allDots.filter(dot => dot.classList.contains("mutation-snp")).length;
-
-            document.getElementById("naturalCount").innerText = natural;
-            document.getElementById("mutationCount").innerText = mutations;
-            document.getElementById("totalSNPs").innerText = natural + mutations;
-        }
-
-        function regenerateData() {
-            addSNPDots(group, currentRoot);
-        }
-
-        function exportView() {
-            const svgNode = document.getElementById("treemap");
-            const serializer = new XMLSerializer();
-            const source = serializer.serializeToString(svgNode);
-            const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
-            const url = URL.createObjectURL(blob);
-
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = "ecm_treemap.svg";
-            link.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function showAllSystems() {
-            zoomOut(baseRoot);
-        }
-
-        // Hook up controls
-        function setupEventListeners() {
-            document.getElementById("proteinFilter").addEventListener("change", () => regenerateData());
-            document.getElementById("snpTypeFilter").addEventListener("change", () => regenerateData());
-            document.getElementById("snpDensity").addEventListener("input", e => {
-                document.getElementById("densityDisplay").innerText =
-                    e.target.value < 150 ? "Low" : e.target.value < 350 ? "Medium" : "High";
-                regenerateData();
-            });
-            document.getElementById("detailLevel").addEventListener("input", e => {
-                const levels = ["Minimal", "Low", "Standard", "High", "Max"];
-                document.getElementById("detailDisplay").innerText = levels[e.target.value - 1];
-                regenerateData();
-            });
-        }
-
-        // Kick off
-        init();
-    </script>
-</body>
-</html>
-
-
+  return svg.node();
+}
